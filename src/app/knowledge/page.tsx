@@ -17,7 +17,7 @@ export default function KnowledgePage() {
           <Link
             key={doc.slug}
             href={`/knowledge/${doc.slug}`}
-            className="flex items-baseline gap-4 px-2 py-2 hover:bg-gray-2"
+            className="flex items-baseline gap-4 px-2 py-2 transition-colors duration-100 hover:bg-gray-2 motion-reduce:transition-none"
           >
             <span className="min-w-0 flex-1">
               <span className="block truncate text-body text-gray-12">{doc.title}</span>

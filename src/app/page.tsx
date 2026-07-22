@@ -38,7 +38,7 @@ export default function HomePage() {
           <Link
             key={section.href}
             href={section.href}
-            className="flex items-baseline gap-4 px-2 py-2 hover:bg-gray-2"
+            className="flex items-baseline gap-4 px-2 py-2 transition-colors duration-100 hover:bg-gray-2 motion-reduce:transition-none"
           >
             <span className="min-w-0 flex-1 truncate text-body text-gray-12">
               {section.title}
