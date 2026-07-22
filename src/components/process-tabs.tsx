@@ -19,7 +19,7 @@ export function ProcessTabs({ slug }: { slug: string }) {
     <div
       role="tablist"
       aria-label="Process views"
-      className="inline-flex items-center gap-1 rounded-full bg-gray-12/85 p-1 shadow-dropdown backdrop-blur-md"
+      className="inline-flex items-center gap-0.5 rounded-full bg-gray-11/90 p-0.5 shadow-dropdown backdrop-blur-md"
     >
       {tabs.map(({ href: tabHref, label, icon: Icon }) => {
         const href = `${base}${tabHref}`;
@@ -31,12 +31,12 @@ export function ProcessTabs({ slug }: { slug: string }) {
             role="tab"
             aria-selected={active}
             className={cn(
-              "flex flex-col items-center gap-0.5 rounded-full px-3 py-1.5 transition-colors duration-100 motion-reduce:transition-none",
-              active ? "text-gray-1" : "text-gray-1/45 hover:text-gray-1/70",
+              "flex flex-col items-center gap-0.5 rounded-full px-2 py-1 backdrop-blur-sm transition-colors duration-100 motion-reduce:transition-none",
+              active ? "text-gray-1" : "text-gray-1/45 hover:bg-gray-1/10 hover:text-gray-1/70",
               focusRing,
             )}
           >
-            <Icon size={15} />
+            <Icon size={11} />
             <span className="text-caption">{label}</span>
           </Link>
         );

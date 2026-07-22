@@ -14,7 +14,7 @@ export default async function ProcessLayout(props: LayoutProps<"/processes/[slug
   return (
     <div className="pb-6">
       <div className="sticky top-0 z-20 bg-background px-12 pt-2">
-        <div className="flex items-center justify-between gap-4">
+        <div className="relative flex items-center justify-between gap-4">
           <PageHeader title={process.name} />
           <div className="flex shrink-0 items-center gap-3">
             <ProcessStatusToggle
@@ -32,11 +32,15 @@ export default async function ProcessLayout(props: LayoutProps<"/processes/[slug
               Share
             </button>
           </div>
+          {/* Centered on the title row itself (not a row of its own) — the
+              capsule's vertical center lines up with the title bar's. */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="pointer-events-auto">
+              <ProcessTabs slug={slug} />
+            </div>
+          </div>
         </div>
         <div className="mt-6 border-b border-border" />
-        <div className="flex justify-center py-4">
-          <ProcessTabs slug={slug} />
-        </div>
       </div>
       <div className="px-12">{props.children}</div>
     </div>
