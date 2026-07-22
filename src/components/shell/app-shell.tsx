@@ -11,13 +11,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { open, toggleNav, consumeNavHandoff, mobileOpen, paletteOpen } = useSidebar();
 
   // When the desktop toggle came from one of the two visible buttons, the
-  // activated button is unmounted by the rail/expanded swap — hand keyboard
-  // focus to its counterpart so focus never drops to <body>.
+  // activated button is unmounted (or hidden) by the open/collapsed swap —
+  // hand keyboard focus to its counterpart so focus never drops to <body>.
   useEffect(() => {
     if (!consumeNavHandoff()) return;
     const selector = open
       ? '[data-sidebar="desktop"] [aria-label="Collapse sidebar"]'
-      : '[data-sidebar="desktop"] [aria-label="Expand sidebar"]';
+      : '[aria-label="Open sidebar"]';
     document.querySelector<HTMLElement>(selector)?.focus();
   }, [open, consumeNavHandoff]);
 
@@ -28,9 +28,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="relative flex min-w-0 flex-1 flex-col"
         inert={mobileOpen || paletteOpen}
       >
-        {/* Mobile-only: the drawer trigger. On desktop the rail is always
-            present, so no reopen affordance is needed here. */}
-        <div className="flex h-12 shrink-0 items-center border-b border-border bg-background px-2 shell:hidden">
+        {/* The drawer/reopen trigger: always shown on mobile (the drawer is
+            independent of desktop `open`), and on desktop only while
+            collapsed — once open, the docked sidebar has its own collapse
+            button. */}
+        <div
+          className={cn(
+            "flex h-12 shrink-0 items-center border-b border-border bg-background px-2",
+            open && "shell:hidden",
+          )}
+        >
           <button
             type="button"
             onClick={() => toggleNav("button")}

@@ -12,7 +12,6 @@ export const DEFAULT_EXPANDED = ["knowledge", "processes"];
 export const DEFAULT_SIDEBAR_WIDTH = 240; // matches the old fixed w-60
 export const MIN_SIDEBAR_WIDTH = 200;
 export const MAX_SIDEBAR_WIDTH = 360;
-export const RAIL_WIDTH = 48; // matches Rail's w-12
 
 export function clampWidth(width: number): number {
   return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width));
