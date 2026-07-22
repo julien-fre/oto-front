@@ -16,7 +16,7 @@ export function ConnectorCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "rounded-lg border border-border p-3 text-left hover:bg-gray-2",
+        "rounded-lg border border-border bg-background p-4 text-left hover:bg-gray-3",
         focusRing,
       )}
     >
@@ -31,8 +31,8 @@ export function ConnectorCard({
           {statusLabels[statusKey]}
         </span>
       </div>
-      <p className="mt-3 text-body-medium text-gray-12">{connector.name}</p>
-      <p className="mt-1 text-caption text-muted">{connector.description}</p>
+      <p className="mt-3 truncate text-body-medium text-gray-12">{connector.name}</p>
+      <p className="mt-1 line-clamp-2 h-8 text-caption text-muted">{connector.description}</p>
     </button>
   );
 }
