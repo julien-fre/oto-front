@@ -132,9 +132,7 @@ export function ConnectorDetailPanel({
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          <p className="text-body text-gray-11">{connector.description}</p>
-
-          <div className="relative mt-4 flex items-center justify-between border-t border-border pt-4">
+          <div className="relative flex items-center justify-between">
             <span className="text-body text-gray-12">Status</span>
             <button
               type="button"
