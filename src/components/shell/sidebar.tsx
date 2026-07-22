@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import {
   BookOpenIcon,
+  DottedIcon,
+  FileTextIcon,
   PanelLeftIcon,
   PlugIcon,
   SearchIcon,
@@ -12,7 +14,16 @@ import {
 } from "@/components/icons";
 import { OtoMark } from "@/components/oto-mark";
 import { cn, focusRing } from "@/lib/cn";
-import { docs, processes } from "@/lib/mock-data";
+import {
+  docColor,
+  docsInFolder,
+  getDoc,
+  knowledgeFolders,
+  LABEL_DOT_COLORS,
+  processColor,
+  processes,
+} from "@/lib/mock-data";
+import { NavFolder } from "./nav-folder";
 import { NavLink } from "./nav-link";
 import { NavSection } from "./nav-section";
 import { Rail } from "./rail";
@@ -71,13 +82,23 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" }) {
             icon={<BookOpenIcon />}
             addLabel="New doc"
           >
-            {docs.map((doc) => (
-              <NavLink
-                key={doc.slug}
-                href={`/knowledge/${doc.slug}`}
-                label={doc.title}
-                indent
-              />
+            {knowledgeFolders.map((folder, i) => (
+              <NavFolder
+                key={folder.id}
+                id={`knowledge-${folder.id}`}
+                label={folder.label}
+                color={LABEL_DOT_COLORS[i % LABEL_DOT_COLORS.length]}
+              >
+                {docsInFolder(folder.id).map((doc) => (
+                  <NavLink
+                    key={doc.slug}
+                    href={`/knowledge/${doc.slug}`}
+                    label={doc.title}
+                    icon={<FileTextIcon style={{ color: docColor(doc.slug) }} />}
+                    indent
+                  />
+                ))}
+              </NavFolder>
             ))}
           </NavSection>
           <NavSection
@@ -95,6 +116,11 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" }) {
                   key={process.slug}
                   href={`/processes/${process.slug}`}
                   label={process.name}
+                  icon={
+                    <DottedIcon color={processColor(process.slug)}>
+                      <SettingsIcon />
+                    </DottedIcon>
+                  }
                   indent
                 />
               ))}
@@ -130,8 +156,13 @@ export function Sidebar() {
   // Navigating into a section reveals it; manual collapse afterwards sticks
   // until the next navigation. The drawer always closes on navigation.
   useEffect(() => {
-    if (pathname.startsWith("/knowledge")) expandGroup("knowledge");
-    else if (pathname.startsWith("/processes")) expandGroup("processes");
+    if (pathname.startsWith("/knowledge")) {
+      expandGroup("knowledge");
+      // Also open the folder holding this doc, so the active row is revealed
+      // rather than hidden inside a collapsed folder.
+      const doc = getDoc(pathname.split("/")[2] ?? "");
+      if (doc) expandGroup(`knowledge-${doc.category}`);
+    } else if (pathname.startsWith("/processes")) expandGroup("processes");
   }, [pathname, expandGroup]);
 
   useEffect(() => {

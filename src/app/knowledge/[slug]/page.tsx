@@ -29,7 +29,7 @@ export default async function DocPage({ params }: PageProps<"/knowledge/[slug]">
               <li key={r.slug}>
                 <Link
                   href={`/knowledge/${r.slug}`}
-                  className="text-body text-gray-11 underline decoration-gray-7 underline-offset-2 hover:text-gray-12"
+                  className="text-body text-gray-11 underline decoration-gray-7 underline-offset-2 transition-colors duration-100 hover:text-gray-12 motion-reduce:transition-none"
                 >
                   {r.title}
                 </Link>

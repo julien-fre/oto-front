@@ -72,7 +72,7 @@ export function Rail() {
           aria-label="Expand sidebar"
           className={cn(railItem, railItemIdle)}
         >
-          <OtoMark className="transition-transform duration-300 ease-out group-hover:rotate-90 motion-reduce:transition-none" />
+          <OtoMark className="text-gray-12 transition-transform duration-300 ease-out group-hover:rotate-90 motion-reduce:transition-none" />
           <Tooltip label="Expand sidebar" />
         </button>
       </div>

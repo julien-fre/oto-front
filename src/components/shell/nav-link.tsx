@@ -35,7 +35,9 @@ export function NavLink({
       aria-current={active ? "page" : undefined}
       className={cn(
         "group flex h-7 items-center gap-2 rounded-full pr-2 transition-colors duration-100 motion-reduce:transition-none",
-        indent ? "pl-9" : "px-2",
+        // Nested rows sit inside a tree-guide container that already indents
+        // them, so they only need a hair of padding of their own.
+        indent ? "pl-1" : "px-2",
         active ? "bg-interactive-checked" : "hover:bg-interactive-hovered",
         focusRing,
       )}
