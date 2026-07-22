@@ -19,8 +19,8 @@ export default async function ProcessPage({ params }: PageProps<"/processes/[slu
     .filter((c) => c !== undefined);
 
   return (
-    <div className="px-8 py-6">
-      <PageHeader title={process.name} caption={process.description} />
+    <div className="px-12 pt-2 pb-6">
+      <PageHeader title={process.name} />
       <p className="mt-4 text-caption">
         <span className={process.status === "active" ? "text-green-11" : "text-muted"}>
           {statusLabel[process.status]}

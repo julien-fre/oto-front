@@ -25,7 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex h-dvh">
       <Sidebar />
       <div
-        className="flex min-w-0 flex-1 flex-col"
+        className="relative flex min-w-0 flex-1 flex-col"
         inert={mobileOpen || paletteOpen}
       >
         {/* Mobile-only: the drawer trigger. On desktop the rail is always

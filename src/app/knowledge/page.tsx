@@ -7,11 +7,8 @@ export const metadata: Metadata = { title: "Knowledge" };
 
 export default function KnowledgePage() {
   return (
-    <div className="px-8 py-6">
-      <PageHeader
-        title="Knowledge"
-        caption="The company's second brain — how the company operates, in writing."
-      />
+    <div className="px-12 pt-2 pb-6">
+      <PageHeader title="Knowledge" />
       <div className="mt-8 divide-y divide-gray-5 border-y border-gray-5">
         {docs.map((doc) => (
           <Link

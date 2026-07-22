@@ -1,8 +1,5 @@
-export function PageHeader({ title, caption }: { title: string; caption: string }) {
-  return (
-    <header>
-      <h1 className="text-title text-gray-12">{title}</h1>
-      <p className="mt-1 text-caption text-muted">{caption}</p>
-    </header>
-  );
+export function PageHeader({ title }: { title: string }) {
+  // leading-7 (28px) matches the floating reopen button (size-7) so the
+  // title lines up with it regardless of sidebar state.
+  return <h1 className="text-[15px] leading-7 text-gray-12">{title}</h1>;
 }
