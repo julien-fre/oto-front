@@ -15,6 +15,7 @@ import { cn, focusRing } from "@/lib/cn";
 import { docs, processes } from "@/lib/mock-data";
 import { NavLink } from "./nav-link";
 import { NavSection } from "./nav-section";
+import { Rail } from "./rail";
 import { useSidebar } from "./sidebar-provider";
 
 function SidebarContent({ variant }: { variant: "desktop" | "drawer" }) {
@@ -27,7 +28,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" }) {
           type="button"
           aria-haspopup="menu"
           className={cn(
-            "group flex h-8 min-w-0 flex-1 items-center gap-2 rounded-full px-2 hover:bg-interactive-hovered",
+            "group flex h-8 min-w-0 flex-1 items-center gap-2 rounded-full px-2 transition-colors duration-100 hover:bg-interactive-hovered motion-reduce:transition-none",
             focusRing,
           )}
         >
@@ -37,9 +38,9 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" }) {
         <button
           type="button"
           onClick={() => toggleNav("button")}
-          aria-label="Close sidebar"
+          aria-label={variant === "drawer" ? "Close sidebar" : "Collapse sidebar"}
           className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-full text-icon hover:bg-interactive-hovered",
+            "flex size-7 shrink-0 items-center justify-center rounded-full text-icon transition-[background-color,scale] duration-100 hover:bg-interactive-hovered active:scale-95 motion-reduce:transition-none",
             focusRing,
           )}
         >
@@ -51,7 +52,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" }) {
           type="button"
           onClick={() => setPaletteOpen(true)}
           className={cn(
-            "flex h-7 w-full items-center gap-2 rounded-full px-2 hover:bg-interactive-hovered",
+            "flex h-7 w-full items-center gap-2 rounded-full px-2 transition-colors duration-100 hover:bg-interactive-hovered motion-reduce:transition-none",
             focusRing,
           )}
         >
@@ -107,7 +108,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" }) {
           type="button"
           aria-haspopup="menu"
           className={cn(
-            "flex h-8 items-center gap-2 rounded-full px-2 hover:bg-interactive-hovered",
+            "flex h-8 items-center gap-2 rounded-full px-2 transition-colors duration-100 hover:bg-interactive-hovered motion-reduce:transition-none",
             focusRing,
           )}
         >
@@ -152,14 +153,19 @@ export function Sidebar() {
     <>
       <div
         data-sidebar="desktop"
-        className="hidden shrink-0 overflow-hidden transition-[width] duration-200 ease-out shell:block motion-reduce:transition-none"
-        style={{ width: open ? "15rem" : 0 }}
-        inert={!open || paletteOpen}
-        aria-hidden={!open}
+        className="hidden shrink-0 border-r border-border bg-gray-2 transition-[width] duration-200 ease-out shell:block motion-reduce:transition-none"
+        style={{ width: open ? "15rem" : "3rem" }}
+        inert={paletteOpen}
       >
-        <div className="h-full w-60 border-r border-border bg-gray-2">
-          <SidebarContent variant="desktop" />
-        </div>
+        {open ? (
+          <div className="h-full overflow-hidden">
+            <div className="h-full w-60 animate-fade-in motion-reduce:animate-none">
+              <SidebarContent variant="desktop" />
+            </div>
+          </div>
+        ) : (
+          <Rail />
+        )}
       </div>
       <div className="shell:hidden">
         <div

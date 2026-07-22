@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { PanelLeftIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
 import { CommandPalette } from "./command-palette";
@@ -9,20 +9,16 @@ import { useSidebar } from "./sidebar-provider";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { open, toggleNav, consumeNavHandoff, mobileOpen, paletteOpen } = useSidebar();
-  const openButtonRef = useRef<HTMLButtonElement>(null);
 
   // When the desktop toggle came from one of the two visible buttons, the
-  // activated button gets hidden/inerted by the toggle itself — hand keyboard
+  // activated button is unmounted by the rail/expanded swap — hand keyboard
   // focus to its counterpart so focus never drops to <body>.
   useEffect(() => {
     if (!consumeNavHandoff()) return;
-    if (open) {
-      document
-        .querySelector<HTMLElement>('[data-sidebar="desktop"] [aria-label="Close sidebar"]')
-        ?.focus();
-    } else {
-      openButtonRef.current?.focus();
-    }
+    const selector = open
+      ? '[data-sidebar="desktop"] [aria-label="Collapse sidebar"]'
+      : '[data-sidebar="desktop"] [aria-label="Expand sidebar"]';
+    document.querySelector<HTMLElement>(selector)?.focus();
   }, [open, consumeNavHandoff]);
 
   return (
@@ -32,21 +28,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="flex min-w-0 flex-1 flex-col"
         inert={mobileOpen || paletteOpen}
       >
-        {/* Reopen affordance: always present on mobile, desktop only when the
-            sidebar is closed. */}
-        <div
-          className={cn(
-            "flex h-12 shrink-0 items-center border-b border-border bg-background px-2",
-            open && "shell:hidden",
-          )}
-        >
+        {/* Mobile-only: the drawer trigger. On desktop the rail is always
+            present, so no reopen affordance is needed here. */}
+        <div className="flex h-12 shrink-0 items-center border-b border-border bg-background px-2 shell:hidden">
           <button
-            ref={openButtonRef}
             type="button"
             onClick={() => toggleNav("button")}
             aria-label="Open sidebar"
             className={cn(
-              "flex size-7 items-center justify-center rounded-full text-icon hover:bg-interactive-hovered",
+              "flex size-7 items-center justify-center rounded-full text-icon transition-[background-color,scale] duration-100 hover:bg-interactive-hovered active:scale-95 motion-reduce:transition-none",
               focusRing,
             )}
           >
