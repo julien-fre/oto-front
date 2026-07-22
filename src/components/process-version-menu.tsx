@@ -43,7 +43,7 @@ export function ProcessVersionMenu({ versions }: { versions: ProcessVersion[] })
         <div
           role="menu"
           aria-label="Versions"
-          className="absolute right-0 top-full z-20 mt-2 w-64 animate-panel-in bg-background py-1 shadow-dropdown motion-reduce:animate-none"
+          className="absolute right-0 top-full z-20 mt-2 w-64 animate-panel-in rounded-lg border border-border bg-background py-1 shadow-dropdown motion-reduce:animate-none"
         >
           {versions.map((version, i) => {
             const isCurrent = i === 0;
@@ -65,7 +65,7 @@ export function ProcessVersionMenu({ versions }: { versions: ProcessVersion[] })
                   <button
                     type="button"
                     className={cn(
-                      "h-6 shrink-0 rounded-full border border-border px-2 text-caption text-gray-12 transition-colors duration-100 hover:bg-gray-2 motion-reduce:transition-none",
+                      "h-7 shrink-0 rounded-full border border-border px-3 text-button text-gray-12 transition-colors duration-100 hover:bg-gray-2 motion-reduce:transition-none",
                       focusRing,
                     )}
                   >
