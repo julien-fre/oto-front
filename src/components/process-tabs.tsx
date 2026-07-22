@@ -29,7 +29,7 @@ export function ProcessTabs({ slug }: { slug: string }) {
               "flex h-7 items-center rounded-full px-3 text-button transition-colors duration-100 motion-reduce:transition-none",
               active
                 ? "bg-interactive-checked text-gray-12"
-                : "text-muted hover:bg-interactive-hovered hover:text-gray-12",
+                : "border border-border text-muted hover:bg-interactive-hovered hover:text-gray-12",
               focusRing,
             )}
           >
