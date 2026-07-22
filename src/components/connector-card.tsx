@@ -1,20 +1,6 @@
 import type { Connector } from "@/lib/mock-data";
 import { cn } from "@/lib/cn";
-
-function statusDisplay(connector: Connector): { label: string; className: string } {
-  if (connector.condition === "degraded")
-    return { label: "Degraded", className: "bg-amber-9/15 text-amber-11" };
-  switch (connector.status) {
-    case "connected":
-      return { label: "Connected", className: "bg-green-9/15 text-green-11" };
-    case "pending":
-      return { label: "Pending access", className: "bg-amber-9/15 text-amber-11" };
-    case "empty":
-      return { label: "Connected, no data", className: "bg-gray-4 text-muted" };
-    case "disconnected":
-      return { label: "Not connected", className: "bg-gray-4 text-muted" };
-  }
-}
+import { connectorStatusKey, statusLabels, statusPillClassName } from "@/lib/connector-status";
 
 function ConnectorLogo({ connector }: { connector: Connector }) {
   if (connector.logoUrl) {
@@ -33,13 +19,18 @@ function ConnectorLogo({ connector }: { connector: Connector }) {
 }
 
 export function ConnectorCard({ connector }: { connector: Connector }) {
-  const status = statusDisplay(connector);
+  const statusKey = connectorStatusKey(connector);
   return (
     <div className="rounded-none border border-border p-3 hover:bg-gray-2">
       <div className="flex items-start justify-between gap-2">
         <ConnectorLogo connector={connector} />
-        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-caption", status.className)}>
-          {status.label}
+        <span
+          className={cn(
+            "shrink-0 rounded-full px-2 py-0.5 text-caption",
+            statusPillClassName[statusKey],
+          )}
+        >
+          {statusLabels[statusKey]}
         </span>
       </div>
       <p className="mt-3 text-body-medium text-gray-12">{connector.name}</p>
