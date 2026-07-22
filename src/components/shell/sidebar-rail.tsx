@@ -103,10 +103,12 @@ export function SidebarRail({
     >
       {/* At rest the page panel's own border is the divider; on hover — and
           for the whole drag — this thickens and darkens over it so the edge
-          reads as grabbable. */}
+          reads as grabbable. Inset by the panel's corner radius (rounded-xl,
+          12px) so the bar covers only the straight run of that edge and never
+          cuts across the rounded corners. The hit area stays full height. */}
       <div
         className={cn(
-          "mx-auto h-full w-0.5 transition-colors duration-100 motion-reduce:transition-none",
+          "absolute inset-y-3 left-1/2 w-0.5 -translate-x-1/2 transition-colors duration-100 motion-reduce:transition-none",
           active ? "bg-gray-9" : "bg-transparent group-hover:bg-gray-9",
         )}
       />
