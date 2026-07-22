@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { ConnectorCredentialModal } from "@/components/connector-credential-modal";
 import { ConnectorLogo } from "@/components/connector-logo";
 import { Toggle } from "@/components/toggle";
 import { XIcon } from "@/components/icons";
@@ -71,6 +72,10 @@ export function ConnectorDetailPanel({
     () => connector?.status ?? "not_selected",
   );
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [hasCredential, setHasCredential] = useState(
+    () => (connector?.status ?? "not_selected") !== "not_selected",
+  );
+  const [credentialModalOpen, setCredentialModalOpen] = useState(false);
   const [enabledNamespaces, setEnabledNamespaces] = useState<Record<string, boolean>>(() =>
     Object.fromEntries((connector?.namespaces ?? []).map((ns) => [ns, true])),
   );
@@ -171,9 +176,23 @@ export function ConnectorDetailPanel({
 
           <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
             <span className="text-body text-gray-12">Access</span>
-            <span className="rounded-full bg-gray-4 px-2 py-0.5 text-caption capitalize text-gray-11">
-              {connector.secretKind === "none" ? "Open data" : sharing}
-            </span>
+            {connector.secretKind === "none" ? (
+              <span className="text-caption text-muted">No access needed</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCredentialModalOpen(true)}
+                className={cn(
+                  "h-7 rounded-full px-3 text-button",
+                  hasCredential
+                    ? "border border-border text-gray-12 hover:bg-gray-2"
+                    : "bg-gray-12 text-background hover:opacity-90",
+                  focusRing,
+                )}
+              >
+                {hasCredential ? "Update" : "Connect"}
+              </button>
+            )}
           </div>
 
           <div className="mt-3 border-t border-border pt-3">
@@ -378,6 +397,17 @@ export function ConnectorDetailPanel({
             ))}
         </div>
       </div>
+
+      <ConnectorCredentialModal
+        connector={connector}
+        open={credentialModalOpen}
+        hasCredential={hasCredential}
+        onClose={() => setCredentialModalOpen(false)}
+        onSave={() => {
+          setHasCredential(true);
+          setCredentialModalOpen(false);
+        }}
+      />
     </>
   );
 }
