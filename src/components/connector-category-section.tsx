@@ -9,9 +9,11 @@ import { ConnectorCard } from "./connector-card";
 export function ConnectorCategorySection({
   category,
   connectors,
+  onSelect,
 }: {
   category: string;
   connectors: Connector[];
+  onSelect: (connector: Connector) => void;
 }) {
   const [open, setOpen] = useState(true);
   const groupId = `connector-category-${category}`;
@@ -38,7 +40,11 @@ export function ConnectorCategorySection({
           className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
         >
           {connectors.map((connector) => (
-            <ConnectorCard key={connector.id} connector={connector} />
+            <ConnectorCard
+              key={connector.id}
+              connector={connector}
+              onSelect={() => onSelect(connector)}
+            />
           ))}
         </div>
       )}
