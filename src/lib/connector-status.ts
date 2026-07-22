@@ -1,23 +1,23 @@
 import type { Connector } from "@/lib/mock-data";
 
-export type ConnectorStatusKey = "connected" | "degraded" | "pending" | "empty" | "disconnected";
+// Oto's real installation states (ConnectorState / connectorVerdict.ts strict
+// color semantics), not a fabricated health matrix: olive/active = resolved
+// and in use, saffron/paused = installed but hidden from agents, faint/
+// not_selected = never installed.
+export type ConnectorStatusKey = Connector["status"];
 
 export function connectorStatusKey(connector: Connector): ConnectorStatusKey {
-  return connector.condition === "degraded" ? "degraded" : connector.status;
+  return connector.status;
 }
 
 export const statusLabels: Record<ConnectorStatusKey, string> = {
-  connected: "Connected",
-  degraded: "Degraded",
-  pending: "Pending access",
-  empty: "Connected, no data",
-  disconnected: "Not connected",
+  active: "Active",
+  paused: "Paused",
+  not_selected: "Not installed",
 };
 
 export const statusPillClassName: Record<ConnectorStatusKey, string> = {
-  connected: "bg-green-9/15 text-green-11",
-  degraded: "bg-amber-9/15 text-amber-11",
-  pending: "bg-amber-9/15 text-amber-11",
-  empty: "bg-gray-4 text-muted",
-  disconnected: "bg-gray-4 text-muted",
+  active: "bg-green-9/15 text-green-11",
+  paused: "bg-amber-9/15 text-amber-11",
+  not_selected: "bg-gray-4 text-muted",
 };

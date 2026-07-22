@@ -3,7 +3,7 @@
 // this product replaces (corma-company-os, second-brain), genericized:
 // docs carry owner + verified date + source-of-truth pointers, processes have
 // a lifecycle + schedule and are composed of skills reused across processes,
-// connectors have a status/condition state model. Dates are preformatted
+// connectors carry Oto's real installation state. Dates are preformatted
 // display strings so server and client can never disagree on locale.
 
 export type Doc = {
@@ -42,8 +42,10 @@ export type Connector = {
   description: string;
   category: string;
   logoUrl: string | null;
-  status: "connected" | "pending" | "empty" | "disconnected";
-  condition?: "degraded";
+  // Oto's real installation state (MyConnector.state) — not a fabricated
+  // health matrix. not_selected = never installed, paused = installed but
+  // hidden from agents, active = installed and in use.
+  status: "not_selected" | "active" | "paused";
   owner: string;
 };
 
@@ -248,7 +250,7 @@ export const connectors: Connector[] = [
     description: "recherche web",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/serper.dev?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Alessandro",
   },
   {
@@ -257,7 +259,7 @@ export const connectors: Connector[] = [
     description: "emails",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/hunter.io?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -266,7 +268,7 @@ export const connectors: Connector[] = [
     description: "données entreprise FR",
     category: "Data FR",
     logoUrl: "https://img.logo.dev/insee.fr?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "disconnected",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -275,7 +277,7 @@ export const connectors: Connector[] = [
     description: "jurisprudence, codes consolidés, conventions collectives (open data DILA/Légifrance)",
     category: "Data FR",
     logoUrl: "https://img.logo.dev/legifrance.gouv.fr?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "pending",
+    status: "paused",
     owner: "Julien",
   },
   {
@@ -284,7 +286,7 @@ export const connectors: Connector[] = [
     description: "CRM",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/attio.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "empty",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -293,7 +295,7 @@ export const connectors: Connector[] = [
     description: "cold outreach",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/lemlist.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -302,7 +304,7 @@ export const connectors: Connector[] = [
     description: "enrichissement",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/kaspr.io?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Alessandro",
   },
   {
@@ -311,7 +313,7 @@ export const connectors: Connector[] = [
     description: "compta",
     category: "Finance",
     logoUrl: "https://img.logo.dev/pennylane.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -320,7 +322,7 @@ export const connectors: Connector[] = [
     description: "messagerie Slack (bot token xoxb- et/ou user token xoxp-)",
     category: "Comms",
     logoUrl: "https://img.logo.dev/slack.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "disconnected",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -329,7 +331,7 @@ export const connectors: Connector[] = [
     description: "enrichissement waterfall",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/fullenrich.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "pending",
+    status: "paused",
     owner: "Julien",
   },
   {
@@ -338,8 +340,7 @@ export const connectors: Connector[] = [
     description: "CRM",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/folk.app?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
-    condition: "degraded",
+    status: "active",
     owner: "Alessandro",
   },
   {
@@ -348,7 +349,7 @@ export const connectors: Connector[] = [
     description: "LinkedIn + WhatsApp + Telegram + Instagram + Messenger + X/Twitter hébergés (recherche/scrape/messagerie)",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/unipile.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -357,7 +358,7 @@ export const connectors: Connector[] = [
     description: "KYB — données & documents entreprise (registres européens)",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/topograph.co?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Alessandro",
   },
   {
@@ -366,7 +367,7 @@ export const connectors: Connector[] = [
     description: "envoi d'email transactionnel (clé de l'org)",
     category: "Autres",
     logoUrl: null,
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -375,7 +376,7 @@ export const connectors: Connector[] = [
     description: "envoi d'email transactionnel via ton compte Scaleway TEM (domaine vérifié chez Scaleway)",
     category: "Autres",
     logoUrl: null,
-    status: "disconnected",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -384,7 +385,7 @@ export const connectors: Connector[] = [
     description: "paie FR (lecture) — API Silae Paie v1",
     category: "Finance",
     logoUrl: "https://img.logo.dev/silae.fr?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "pending",
+    status: "paused",
     owner: "Julien",
   },
   {
@@ -393,7 +394,7 @@ export const connectors: Connector[] = [
     description: "prélèvements SEPA (lecture)",
     category: "Finance",
     logoUrl: "https://img.logo.dev/gocardless.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "empty",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -402,7 +403,7 @@ export const connectors: Connector[] = [
     description: "CRM Folk via son MCP officiel (fédéré, OAuth per-user)",
     category: "Autres",
     logoUrl: null,
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -411,7 +412,7 @@ export const connectors: Connector[] = [
     description: "agenda + caisse Planity (RDV, clients, CA, stats) — MCP fédéré",
     category: "Métier",
     logoUrl: "https://img.logo.dev/planity.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Alessandro",
   },
   {
@@ -420,7 +421,7 @@ export const connectors: Connector[] = [
     description: "people & company search via LinkedIn",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/ai-ark.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -429,7 +430,7 @@ export const connectors: Connector[] = [
     description: "B2B contact & company search, reveal, and identity enrichment",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/cognism.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "disconnected",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -438,7 +439,7 @@ export const connectors: Connector[] = [
     description: "fiches société/personne (session Browserbase)",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/crunchbase.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "pending",
+    status: "paused",
     owner: "Julien",
   },
   {
@@ -447,7 +448,7 @@ export const connectors: Connector[] = [
     description: "automations marketing (session Browserbase)",
     category: "Automatisation",
     logoUrl: "https://img.logo.dev/brevo.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "empty",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -456,7 +457,7 @@ export const connectors: Connector[] = [
     description: "bac documentaire Pennylane (session Browserbase)",
     category: "Finance",
     logoUrl: "https://img.logo.dev/pennylane.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -465,7 +466,7 @@ export const connectors: Connector[] = [
     description: "Gmail + Tasks + Calendar + Sheets + Drive + Chat (OAuth)",
     category: "Comms",
     logoUrl: "https://img.logo.dev/google.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Alessandro",
   },
   {
@@ -474,7 +475,7 @@ export const connectors: Connector[] = [
     description: "entreprises du spectacle vivant — open data Ministère de la Culture",
     category: "Data FR",
     logoUrl: "https://img.logo.dev/culture.gouv.fr?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -483,7 +484,7 @@ export const connectors: Connector[] = [
     description: "recherche & lecture de posts/subreddits (API publique)",
     category: "Web",
     logoUrl: "https://img.logo.dev/reddit.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "disconnected",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -492,7 +493,7 @@ export const connectors: Connector[] = [
     description: "entreprises Grèce — registre GEMI + VIES (open data)",
     category: "Data GR",
     logoUrl: null,
-    status: "pending",
+    status: "paused",
     owner: "Julien",
   },
   {
@@ -501,7 +502,7 @@ export const connectors: Connector[] = [
     description: "géocodage, cadastre, bâti, risques/ICPE, solaire, immobilier (open data)",
     category: "Data FR",
     logoUrl: "https://img.logo.dev/data.gouv.fr?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "empty",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -510,7 +511,7 @@ export const connectors: Connector[] = [
     description: "zonage PLU/GPU, risques, QPV, EPFIF, socio-démo commune (open data)",
     category: "Autres",
     logoUrl: "https://img.logo.dev/geoportail-urbanisme.gouv.fr?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -519,7 +520,7 @@ export const connectors: Connector[] = [
     description: "établissements FINESS + évaluations ESSMS HAS (open data)",
     category: "Data FR",
     logoUrl: "https://img.logo.dev/has-sante.fr?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Alessandro",
   },
   {
@@ -528,7 +529,7 @@ export const connectors: Connector[] = [
     description: "points d'intérêt OSM par tag sur une zone (parkings, équipements, commerces) — recensement exhaustif via Overpass (open data)",
     category: "Autres",
     logoUrl: null,
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -537,7 +538,7 @@ export const connectors: Connector[] = [
     description: "annuaire écosystème d'une capitale French Tech (startups/structures/prestataires) + événements, appels à projet, financements + French Tech Central (open data, défaut Aix-Marseille)",
     category: "Data FR",
     logoUrl: "https://img.logo.dev/lafrenchtech.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "disconnected",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -546,7 +547,7 @@ export const connectors: Connector[] = [
     description: "empreinte numérique d'un domaine : whois/RDAP, DNS, posture e-mail (SPF/DMARC), sous-domaines (CT), TLS, headers de sécurité (recon passif)",
     category: "Infosec",
     logoUrl: null,
-    status: "pending",
+    status: "paused",
     owner: "Julien",
   },
   {
@@ -555,7 +556,7 @@ export const connectors: Connector[] = [
     description: "CRM (contacts, companies, deals, tickets, notes)",
     category: "Prospection",
     logoUrl: null,
-    status: "empty",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -564,7 +565,7 @@ export const connectors: Connector[] = [
     description: "emailing & CRM (contacts, listes, transactionnel, campagnes, deals)",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/brevo.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -573,7 +574,7 @@ export const connectors: Connector[] = [
     description: "prospection B2B (organizations, people, job postings)",
     category: "Prospection",
     logoUrl: null,
-    status: "connected",
+    status: "active",
     owner: "Alessandro",
   },
   {
@@ -582,7 +583,7 @@ export const connectors: Connector[] = [
     description: "vérification de délivrabilité email",
     category: "Prospection",
     logoUrl: null,
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -591,7 +592,7 @@ export const connectors: Connector[] = [
     description: "données entreprise européennes (recherche + détails)",
     category: "Prospection",
     logoUrl: null,
-    status: "disconnected",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -600,7 +601,7 @@ export const connectors: Connector[] = [
     description: "agents d'automatisation (launch + résultats)",
     category: "Prospection",
     logoUrl: null,
-    status: "pending",
+    status: "paused",
     owner: "Julien",
   },
   {
@@ -609,7 +610,7 @@ export const connectors: Connector[] = [
     description: "pages, bases de données, blocs (lecture + écriture)",
     category: "Knowledge",
     logoUrl: null,
-    status: "empty",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -618,7 +619,7 @@ export const connectors: Connector[] = [
     description: "fichiers, export d'images, commentaires, FigJam",
     category: "Design",
     logoUrl: null,
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -627,7 +628,7 @@ export const connectors: Connector[] = [
     description: "Management API (projets, config auth, logs)",
     category: "Dev",
     logoUrl: null,
-    status: "connected",
+    status: "active",
     owner: "Alessandro",
   },
   {
@@ -636,8 +637,7 @@ export const connectors: Connector[] = [
     description: "CRM Zoho (CRUD modules, notes)",
     category: "Prospection",
     logoUrl: null,
-    status: "connected",
-    condition: "degraded",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -646,7 +646,7 @@ export const connectors: Connector[] = [
     description: "support Zoho Desk (tickets, threads, contacts)",
     category: "Comms",
     logoUrl: null,
-    status: "disconnected",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -655,7 +655,7 @@ export const connectors: Connector[] = [
     description: "Zoho Analytics (workspaces, vues, export, requêtes SQL)",
     category: "Knowledge",
     logoUrl: null,
-    status: "pending",
+    status: "paused",
     owner: "Julien",
   },
   {
@@ -664,7 +664,7 @@ export const connectors: Connector[] = [
     description: "CRM Salesforce (Contacts, Accounts/companies, Leads, Opportunities, notes)",
     category: "Prospection",
     logoUrl: null,
-    status: "empty",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -673,7 +673,7 @@ export const connectors: Connector[] = [
     description: "ATS — candidats, jobs, candidatures, notes (Harvest API)",
     category: "Recrutement",
     logoUrl: "https://img.logo.dev/greenhouse.io?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -682,7 +682,7 @@ export const connectors: Connector[] = [
     description: "ATS — opportunities (candidats), postings, stages, notes",
     category: "Recrutement",
     logoUrl: "https://img.logo.dev/lever.co?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Alessandro",
   },
   {
@@ -691,7 +691,7 @@ export const connectors: Connector[] = [
     description: "ATS — candidates, jobs, applications, notes",
     category: "Recrutement",
     logoUrl: "https://img.logo.dev/ashbyhq.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -700,7 +700,7 @@ export const connectors: Connector[] = [
     description: "ATS — candidats, jobs, candidatures (JSON:API)",
     category: "Recrutement",
     logoUrl: "https://img.logo.dev/teamtailor.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "disconnected",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -709,7 +709,7 @@ export const connectors: Connector[] = [
     description: "ATS — candidats, offers (postes), notes",
     category: "Recrutement",
     logoUrl: "https://img.logo.dev/recruitee.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "pending",
+    status: "paused",
     owner: "Julien",
   },
   {
@@ -718,7 +718,7 @@ export const connectors: Connector[] = [
     description: "recherche multi-moteurs (Google verticals, Bing, YouTube, Walmart, Amazon, jobs…)",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/serpapi.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "empty",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -727,7 +727,7 @@ export const connectors: Connector[] = [
     description: "recherche multi-moteurs (Google verticals, YouTube, Bing, jobs, news, maps, scholar…)",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/searchapi.io?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -736,8 +736,7 @@ export const connectors: Connector[] = [
     description: "scraping & SERP via proxy (coquille vide — à implémenter)",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/brightdata.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
-    condition: "degraded",
+    status: "active",
     owner: "Alessandro",
   },
   {
@@ -746,7 +745,7 @@ export const connectors: Connector[] = [
     description: "veille AI-search (ChatGPT, Gemini, Perplexity…) + SERP Google JSON",
     category: "Prospection",
     logoUrl: "https://img.logo.dev/cloro.dev?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
   {
@@ -755,7 +754,7 @@ export const connectors: Connector[] = [
     description: "automatisation de workflows — workflows + exécutions (API publique)",
     category: "Automatisation",
     logoUrl: "https://img.logo.dev/n8n.io?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "disconnected",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -764,7 +763,7 @@ export const connectors: Connector[] = [
     description: "automatisation de workflows — scénarios, exécution, logs (API v2)",
     category: "Automatisation",
     logoUrl: "https://img.logo.dev/make.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "pending",
+    status: "paused",
     owner: "Julien",
   },
   {
@@ -773,7 +772,7 @@ export const connectors: Connector[] = [
     description: "automatisation — actions exposées (AI Actions) + exécution",
     category: "Automatisation",
     logoUrl: "https://img.logo.dev/zapier.com?token=pk_Hvj44EaUSjmsX5fB3VGBXA&size=256&format=png&retina=true",
-    status: "empty",
+    status: "not_selected",
     owner: "Alessandro",
   },
   {
@@ -782,7 +781,7 @@ export const connectors: Connector[] = [
     description: "connecte n'importe quelle API HTTP à oto : renseigne l'URL de base, le mode d'auth (bearer / clé en header ou query / basic / oauth2) et le secret correspondant. oto stocke le secret (coffre chiffré) et tape l'API directement, en lecture seule (GET).",
     category: "Autres",
     logoUrl: null,
-    status: "connected",
+    status: "active",
     owner: "Julien",
   },
 ];

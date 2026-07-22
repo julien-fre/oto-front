@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: { absolute: "Home · Oto" } };
 // its own issue; this stub already computes from the workspace objects.
 export default function HomePage() {
   const activeProcesses = processes.filter((p) => p.status === "active");
-  const connected = connectors.filter((c) => c.status === "connected");
+  const connected = connectors.filter((c) => c.status === "active");
   const sections = [
     {
       href: "/knowledge",
