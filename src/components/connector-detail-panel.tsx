@@ -6,29 +6,37 @@ import { ConnectorLogo } from "@/components/connector-logo";
 import { Toggle } from "@/components/toggle";
 import { XIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
-import { authExplain } from "@/lib/connector-ai-access";
-import { connectorStatusKey, statusLabels, statusPillClassName } from "@/lib/connector-status";
+import { statusLabels, statusPillClassName, type ConnectorStatusKey } from "@/lib/connector-status";
 import { connectorUsage, team, teams, type Connector } from "@/lib/mock-data";
-
-const secretKindLabels: Record<string, string> = {
-  api_key: "API key",
-  oauth: "OAuth",
-  basic_auth: "Basic auth",
-  cookie: "Session cookie",
-  fields: "Custom fields",
-  none: "None (open data)",
-};
 
 const linkClassName =
   "text-gray-11 underline decoration-gray-7 underline-offset-2 hover:text-gray-12";
 
-type Tab = "team" | "tools" | "access";
-const tabOrder: Tab[] = ["team", "tools", "access"];
+type Tab = "team" | "tools";
+const tabOrder: Tab[] = ["team", "tools"];
 const tabLabels: Record<Tab, string> = {
   team: "Team Access",
   tools: "Tools",
-  access: "AI Access",
 };
+
+// What clicking the status pill offers, given the current status.
+function statusActions(
+  status: ConnectorStatusKey,
+): { label: string; next: ConnectorStatusKey }[] {
+  if (status === "active") {
+    return [
+      { label: "Pause", next: "paused" },
+      { label: "Uninstall", next: "not_selected" },
+    ];
+  }
+  if (status === "paused") {
+    return [
+      { label: "Activate", next: "active" },
+      { label: "Uninstall", next: "not_selected" },
+    ];
+  }
+  return [{ label: "Activate", next: "active" }];
+}
 
 type Sharing = "private" | "shared";
 
@@ -59,6 +67,10 @@ export function ConnectorDetailPanel({
   // Local, visual-only state — no backend to persist to. Resets per
   // connector for free since the panel remounts via key={connector.id} in
   // connectors-browser.tsx.
+  const [status, setStatus] = useState<ConnectorStatusKey>(
+    () => connector?.status ?? "not_selected",
+  );
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [enabledNamespaces, setEnabledNamespaces] = useState<Record<string, boolean>>(() =>
     Object.fromEntries((connector?.namespaces ?? []).map((ns) => [ns, true])),
   );
@@ -73,8 +85,9 @@ export function ConnectorDetailPanel({
   }));
 
   if (!connector) return null;
-  const statusKey = connectorStatusKey(connector);
   const usage = connectorUsage(connector.id);
+  const showPublisher =
+    connector.publisher && connector.publisher.toLowerCase() !== connector.name.toLowerCase();
 
   return (
     <>
@@ -90,7 +103,7 @@ export function ConnectorDetailPanel({
             <ConnectorLogo connector={connector} />
             <div className="min-w-0">
               <p className="truncate text-title text-gray-12">{connector.name}</p>
-              {connector.publisher && (
+              {showPublisher && (
                 <p className="truncate text-caption text-muted">{connector.publisher}</p>
               )}
             </div>
@@ -112,16 +125,48 @@ export function ConnectorDetailPanel({
         <div className="flex-1 overflow-y-auto px-4 py-4">
           <p className="text-body text-gray-11">{connector.description}</p>
 
-          <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+          <div className="relative mt-4 flex items-center justify-between border-t border-border pt-4">
             <span className="text-body text-gray-12">Status</span>
-            <span
+            <button
+              type="button"
+              onClick={() => setStatusMenuOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={statusMenuOpen}
               className={cn(
                 "rounded-full px-2 py-0.5 text-caption",
-                statusPillClassName[statusKey],
+                statusPillClassName[status],
+                focusRing,
               )}
             >
-              {statusLabels[statusKey]}
-            </span>
+              {statusLabels[status]}
+            </button>
+            {statusMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full z-20 mt-1 w-32 border border-border bg-background py-1 shadow-dropdown"
+                >
+                  {statusActions(status).map((a) => (
+                    <button
+                      key={a.label}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setStatus(a.next);
+                        setStatusMenuOpen(false);
+                      }}
+                      className={cn(
+                        "block w-full px-3 py-1.5 text-left text-body text-gray-12 hover:bg-gray-2",
+                        focusRing,
+                      )}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
@@ -331,18 +376,6 @@ export function ConnectorDetailPanel({
             ) : (
               <p className="mt-4 text-caption text-muted">No tools resolved for this connector.</p>
             ))}
-
-          {tab === "access" && (
-            <div className="mt-4 flex flex-col gap-4">
-              <p className="text-body text-gray-11">{authExplain(connector, sharing)}</p>
-              <div className="flex items-center justify-between border-t border-border pt-3">
-                <span className="text-body text-gray-12">Credential type</span>
-                <span className="text-body text-gray-11">
-                  {secretKindLabels[connector.secretKind] ?? connector.secretKind}
-                </span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </>
