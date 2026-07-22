@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChartIcon, HouseIcon, WorkflowIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
 
 const tabs = [
-  { href: "", label: "Overview" },
-  { href: "/flow", label: "Flow" },
-  { href: "/usage", label: "Usage" },
+  { href: "", label: "Overview", icon: HouseIcon },
+  { href: "/flow", label: "Flow", icon: WorkflowIcon },
+  { href: "/usage", label: "Usage", icon: ChartIcon },
 ] as const;
 
 export function ProcessTabs({ slug }: { slug: string }) {
@@ -15,25 +16,28 @@ export function ProcessTabs({ slug }: { slug: string }) {
   const base = `/processes/${slug}`;
 
   return (
-    <div role="tablist" aria-label="Process views" className="flex items-center gap-1">
-      {tabs.map((tab) => {
-        const href = `${base}${tab.href}`;
+    <div
+      role="tablist"
+      aria-label="Process views"
+      className="inline-flex items-center gap-1 rounded-full bg-gray-12/85 p-2 shadow-dropdown backdrop-blur-md"
+    >
+      {tabs.map(({ href: tabHref, label, icon: Icon }) => {
+        const href = `${base}${tabHref}`;
         const active = pathname === href;
         return (
           <Link
-            key={tab.label}
+            key={label}
             href={href}
             role="tab"
             aria-selected={active}
             className={cn(
-              "flex h-7 items-center rounded-full px-3 text-button transition-colors duration-100 motion-reduce:transition-none",
-              active
-                ? "bg-interactive-checked text-gray-12"
-                : "border border-border text-muted hover:bg-interactive-hovered hover:text-gray-12",
+              "flex w-20 flex-col items-center gap-1 rounded-full py-2 transition-colors duration-100 motion-reduce:transition-none",
+              active ? "text-gray-1" : "text-gray-1/45 hover:text-gray-1/70",
               focusRing,
             )}
           >
-            {tab.label}
+            <Icon size={20} />
+            <span className="text-caption">{label}</span>
           </Link>
         );
       })}
