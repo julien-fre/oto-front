@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BookOpenIcon,
   PanelLeftIcon,
@@ -15,13 +15,14 @@ import { cn, focusRing } from "@/lib/cn";
 import { docs, processes } from "@/lib/mock-data";
 import { NavLink } from "./nav-link";
 import { NavSection } from "./nav-section";
+import { SidebarRail } from "./sidebar-rail";
 import { useSidebar } from "./sidebar-provider";
 
 function SidebarContent({ variant }: { variant: "desktop" | "drawer" }) {
   const { toggleNav, setPaletteOpen } = useSidebar();
 
   return (
-    <div className="flex h-full w-60 flex-col">
+    <div className={cn("flex h-full flex-col", variant === "drawer" ? "w-60" : "w-full")}>
       <div className="flex h-12 shrink-0 items-center gap-1 px-2">
         <button
           type="button"
@@ -122,9 +123,11 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" }) {
 }
 
 export function Sidebar() {
-  const { open, mobileOpen, setMobileOpen, expandGroup, paletteOpen } = useSidebar();
+  const { open, toggleNav, width, setWidth, mobileOpen, setMobileOpen, expandGroup, paletteOpen } =
+    useSidebar();
   const pathname = usePathname();
   const drawerRef = useRef<HTMLDivElement>(null);
+  const [resizing, setResizing] = useState(false);
 
   // Navigating into a section reveals it; manual collapse afterwards sticks
   // until the next navigation. The drawer always closes on navigation.
@@ -152,13 +155,26 @@ export function Sidebar() {
     <>
       <div
         data-sidebar="desktop"
-        className="hidden shrink-0 overflow-hidden transition-[width] duration-200 ease-out shell:block motion-reduce:transition-none"
-        style={{ width: open ? "15rem" : 0 }}
+        className={cn(
+          "hidden shrink-0 overflow-hidden shell:block",
+          !resizing && "transition-[width] duration-200 ease-out motion-reduce:transition-none",
+        )}
+        style={{ width: open ? width : 0 }}
         inert={!open || paletteOpen}
         aria-hidden={!open}
       >
-        <div className="h-full w-60 border-r border-border bg-gray-2">
+        <div
+          className="relative h-full border-r border-border bg-gray-2"
+          style={{ width }}
+        >
           <SidebarContent variant="desktop" />
+          <SidebarRail
+            width={width}
+            onResize={setWidth}
+            onToggle={() => toggleNav("button")}
+            onDragStart={() => setResizing(true)}
+            onDragEnd={() => setResizing(false)}
+          />
         </div>
       </div>
       <div className="shell:hidden">

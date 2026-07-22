@@ -11,9 +11,11 @@ import {
   type ReactNode,
 } from "react";
 import {
+  clampWidth,
   GROUPS_COOKIE,
   SIDEBAR_COOKIE,
   serializeGroups,
+  WIDTH_COOKIE,
   writeCookie,
 } from "@/lib/sidebar-cookies";
 
@@ -32,6 +34,8 @@ type SidebarContextValue = {
   setMobileOpen: (open: boolean) => void;
   paletteOpen: boolean;
   setPaletteOpen: (open: boolean) => void;
+  width: number;
+  setWidth: (width: number) => void;
 };
 
 const SidebarContext = createContext<SidebarContextValue | null>(null);
@@ -45,14 +49,17 @@ export function useSidebar() {
 export function SidebarProvider({
   defaultOpen,
   defaultExpanded,
+  defaultWidth,
   children,
 }: {
   defaultOpen: boolean;
   defaultExpanded: string[];
+  defaultWidth: number;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [width, setWidthState] = useState(defaultWidth);
   const [mobileOpen, setMobileOpenState] = useState(false);
   const [paletteOpen, setPaletteOpenState] = useState(false);
   // Set when a toggle came from one of the two visible toggle buttons — the
@@ -107,6 +114,14 @@ export function SidebarProvider({
   useEffect(() => {
     writeCookie(GROUPS_COOKIE, serializeGroups(expanded));
   }, [expanded]);
+
+  useEffect(() => {
+    writeCookie(WIDTH_COOKIE, String(width));
+  }, [width]);
+
+  const setWidth = useCallback((next: number) => {
+    setWidthState(clampWidth(next));
+  }, []);
 
   // The mobile drawer is ephemeral; only the desktop column persists.
   const toggleNav = useCallback(
@@ -167,6 +182,8 @@ export function SidebarProvider({
       setMobileOpen,
       paletteOpen,
       setPaletteOpen,
+      width,
+      setWidth,
     }),
     [
       open,
@@ -179,6 +196,8 @@ export function SidebarProvider({
       setMobileOpen,
       paletteOpen,
       setPaletteOpen,
+      width,
+      setWidth,
     ],
   );
 
