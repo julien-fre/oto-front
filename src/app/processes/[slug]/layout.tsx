@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { ProcessStatusToggle } from "@/components/process-status-toggle";
 import { ProcessTabs } from "@/components/process-tabs";
+import { ProcessVersionMenu } from "@/components/process-version-menu";
 import { cn, focusRing } from "@/lib/cn";
 import { getProcess } from "@/lib/mock-data";
 
@@ -15,10 +16,8 @@ export default async function ProcessLayout(props: LayoutProps<"/processes/[slug
       <div className="flex items-center justify-between gap-4">
         <PageHeader title={process.name} />
         <div className="flex shrink-0 items-center gap-3">
-          <ProcessStatusToggle key={slug} initialActive={process.status === "active"} />
-          <span className="whitespace-nowrap text-caption text-muted">
-            {process.schedule ?? "Manual"}
-          </span>
+          <ProcessStatusToggle key={`status-${slug}`} initialActive={process.status === "active"} />
+          <ProcessVersionMenu key={`versions-${slug}`} versions={process.versions} />
           <button
             type="button"
             className={cn(

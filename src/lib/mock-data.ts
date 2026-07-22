@@ -29,6 +29,11 @@ export type ProcessRun = {
   status: "success" | "failed";
 };
 
+export type ProcessVersion = {
+  version: number;
+  createdAt: string;
+};
+
 export type Process = {
   slug: string;
   name: string;
@@ -42,6 +47,8 @@ export type Process = {
   outputs: string[];
   // Most recent run first. Empty for processes that have never run (drafts).
   runs: ProcessRun[];
+  // Highest version first — versions[0] is the current one.
+  versions: ProcessVersion[];
 };
 
 export type Connector = {
@@ -189,6 +196,11 @@ export const processes: Process[] = [
       { ranAt: "Jul 14, 2026 16:05", durationMinutes: 5, status: "success" },
       { ranAt: "Jul 9, 2026 11:47", durationMinutes: 8, status: "failed" },
     ],
+    versions: [
+      { version: 3, createdAt: "Jul 18, 2026" },
+      { version: 2, createdAt: "Jul 2, 2026" },
+      { version: 1, createdAt: "Jun 14, 2026" },
+    ],
   },
   {
     slug: "weekly-feedback-report",
@@ -205,6 +217,10 @@ export const processes: Process[] = [
       { ranAt: "Jul 20, 2026 09:00", durationMinutes: 12, status: "success" },
       { ranAt: "Jul 13, 2026 09:00", durationMinutes: 11, status: "success" },
       { ranAt: "Jul 6, 2026 09:00", durationMinutes: 14, status: "success" },
+    ],
+    versions: [
+      { version: 2, createdAt: "Jul 11, 2026" },
+      { version: 1, createdAt: "Jun 20, 2026" },
     ],
   },
   {
@@ -223,6 +239,7 @@ export const processes: Process[] = [
       { ranAt: "Jul 17, 2026 07:00", durationMinutes: 4, status: "success" },
       { ranAt: "Jul 14, 2026 07:00", durationMinutes: 3, status: "success" },
     ],
+    versions: [{ version: 1, createdAt: "May 30, 2026" }],
   },
   {
     slug: "churn-alerts",
@@ -239,6 +256,10 @@ export const processes: Process[] = [
       { ranAt: "Jul 21, 2026 08:00", durationMinutes: 2, status: "success" },
       { ranAt: "Jul 20, 2026 08:00", durationMinutes: 2, status: "success" },
       { ranAt: "Jul 19, 2026 08:00", durationMinutes: 2, status: "success" },
+    ],
+    versions: [
+      { version: 2, createdAt: "Jul 5, 2026" },
+      { version: 1, createdAt: "Jun 8, 2026" },
     ],
   },
   {
@@ -257,6 +278,11 @@ export const processes: Process[] = [
       { ranAt: "Jul 20, 2026 08:00", durationMinutes: 3, status: "success" },
       { ranAt: "Jul 19, 2026 08:00", durationMinutes: 9, status: "failed" },
     ],
+    versions: [
+      { version: 3, createdAt: "Jul 15, 2026" },
+      { version: 2, createdAt: "Jun 22, 2026" },
+      { version: 1, createdAt: "Jun 1, 2026" },
+    ],
   },
   {
     slug: "founder-content-drafts",
@@ -270,6 +296,7 @@ export const processes: Process[] = [
     connectorIds: ["slack"],
     outputs: ["Slack drafts"],
     runs: [],
+    versions: [{ version: 1, createdAt: "Jul 19, 2026" }],
   },
   {
     slug: "invoice-sync",
@@ -283,6 +310,12 @@ export const processes: Process[] = [
     connectorIds: ["hubspot"],
     outputs: ["Ledger updates"],
     runs: [{ ranAt: "Mar 2, 2026 10:00", durationMinutes: 5, status: "success" }],
+    versions: [
+      { version: 4, createdAt: "Feb 20, 2026" },
+      { version: 3, createdAt: "Jan 12, 2026" },
+      { version: 2, createdAt: "Dec 3, 2025" },
+      { version: 1, createdAt: "Nov 8, 2025" },
+    ],
   },
 ];
 
