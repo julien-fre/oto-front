@@ -23,6 +23,12 @@ export type Skill = {
   description: string;
 };
 
+export type ProcessRun = {
+  ranAt: string;
+  durationMinutes: number;
+  status: "success" | "failed";
+};
+
 export type Process = {
   slug: string;
   name: string;
@@ -34,6 +40,8 @@ export type Process = {
   skillIds: string[];
   connectorIds: string[];
   outputs: string[];
+  // Most recent run first. Empty for processes that have never run (drafts).
+  runs: ProcessRun[];
 };
 
 export type Connector = {
@@ -175,6 +183,12 @@ export const processes: Process[] = [
     ],
     connectorIds: ["hubspot", "lemlist", "slack"],
     outputs: ["CRM list", "Campaign", "Slack recap"],
+    runs: [
+      { ranAt: "Jul 21, 2026 14:32", durationMinutes: 6, status: "success" },
+      { ranAt: "Jul 18, 2026 09:14", durationMinutes: 7, status: "success" },
+      { ranAt: "Jul 14, 2026 16:05", durationMinutes: 5, status: "success" },
+      { ranAt: "Jul 9, 2026 11:47", durationMinutes: 8, status: "failed" },
+    ],
   },
   {
     slug: "weekly-feedback-report",
@@ -187,6 +201,11 @@ export const processes: Process[] = [
     skillIds: ["extract-call-feedback", "render-report", "post-slack-digest", "file-tickets"],
     connectorIds: ["notion", "slack"],
     outputs: ["Report page", "Tickets", "Slack recap"],
+    runs: [
+      { ranAt: "Jul 20, 2026 09:00", durationMinutes: 12, status: "success" },
+      { ranAt: "Jul 13, 2026 09:00", durationMinutes: 11, status: "success" },
+      { ranAt: "Jul 6, 2026 09:00", durationMinutes: 14, status: "success" },
+    ],
   },
   {
     slug: "competitor-watch",
@@ -199,6 +218,11 @@ export const processes: Process[] = [
     skillIds: ["collect-hiring-signals", "detect-tech-stack", "draft-outreach", "post-slack-digest"],
     connectorIds: ["hubspot", "lemlist", "slack"],
     outputs: ["Campaign", "Slack recap"],
+    runs: [
+      { ranAt: "Jul 21, 2026 07:00", durationMinutes: 4, status: "success" },
+      { ranAt: "Jul 17, 2026 07:00", durationMinutes: 4, status: "success" },
+      { ranAt: "Jul 14, 2026 07:00", durationMinutes: 3, status: "success" },
+    ],
   },
   {
     slug: "churn-alerts",
@@ -211,6 +235,11 @@ export const processes: Process[] = [
     skillIds: ["pull-crm-records", "post-slack-digest"],
     connectorIds: ["zohoanalytics", "hubspot", "slack"],
     outputs: ["Slack alert"],
+    runs: [
+      { ranAt: "Jul 21, 2026 08:00", durationMinutes: 2, status: "success" },
+      { ranAt: "Jul 20, 2026 08:00", durationMinutes: 2, status: "success" },
+      { ranAt: "Jul 19, 2026 08:00", durationMinutes: 2, status: "success" },
+    ],
   },
   {
     slug: "workspace-health-check",
@@ -223,6 +252,11 @@ export const processes: Process[] = [
     skillIds: ["post-slack-digest"],
     connectorIds: ["notion", "slack"],
     outputs: ["Slack heartbeat"],
+    runs: [
+      { ranAt: "Jul 21, 2026 08:00", durationMinutes: 3, status: "success" },
+      { ranAt: "Jul 20, 2026 08:00", durationMinutes: 3, status: "success" },
+      { ranAt: "Jul 19, 2026 08:00", durationMinutes: 9, status: "failed" },
+    ],
   },
   {
     slug: "founder-content-drafts",
@@ -235,6 +269,7 @@ export const processes: Process[] = [
     skillIds: ["draft-outreach", "post-slack-digest"],
     connectorIds: ["slack"],
     outputs: ["Slack drafts"],
+    runs: [],
   },
   {
     slug: "invoice-sync",
@@ -247,6 +282,7 @@ export const processes: Process[] = [
     skillIds: ["pull-crm-records", "sync-crm"],
     connectorIds: ["hubspot"],
     outputs: ["Ledger updates"],
+    runs: [{ ranAt: "Mar 2, 2026 10:00", durationMinutes: 5, status: "success" }],
   },
 ];
 
