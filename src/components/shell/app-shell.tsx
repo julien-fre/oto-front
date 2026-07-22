@@ -22,23 +22,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [open, consumeNavHandoff]);
 
   return (
-    // The app background is the sidebar's surface. A full-width bar sits above
-    // everything so the breadcrumb stays visible no matter what the sidebar is
-    // doing; the sidebar and the page hang below it, and the page is an inset
-    // rounded panel so the sidebar reads as a frame around it.
-    <div className="flex h-dvh flex-col bg-gray-2">
-      <TopBar inert={mobileOpen || paletteOpen} />
-      <div className="flex min-h-0 flex-1">
-        <Sidebar />
-        <div
-          className={cn(
-            "relative flex min-w-0 flex-1 flex-col bg-background",
-            "shell:mx-2 shell:mb-2 shell:overflow-hidden shell:rounded-xl shell:border shell:border-border",
-          )}
-          inert={mobileOpen || paletteOpen}
-        >
-          <main className="flex-1 overflow-y-auto">{children}</main>
-        </div>
+    // The app background is the sidebar's surface. The breadcrumb bar is
+    // scoped to the page column only (beside the sidebar, not above it) —
+    // the sidebar carries its own header — and the page is an inset rounded
+    // panel on all four sides so the sidebar reads as a frame around it.
+    <div className="flex h-dvh bg-gray-2">
+      <Sidebar />
+      <div
+        className={cn(
+          "relative flex min-h-0 min-w-0 flex-1 flex-col bg-background",
+          "shell:m-2 shell:overflow-hidden shell:rounded-xl shell:border shell:border-border",
+        )}
+        inert={mobileOpen || paletteOpen}
+      >
+        <TopBar inert={mobileOpen || paletteOpen} />
+        <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
       <CommandPalette />
     </div>
