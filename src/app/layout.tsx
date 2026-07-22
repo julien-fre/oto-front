@@ -3,7 +3,13 @@ import { Geist_Mono, Inter } from "next/font/google";
 import { cookies } from "next/headers";
 import { AppShell } from "@/components/shell/app-shell";
 import { SidebarProvider } from "@/components/shell/sidebar-provider";
-import { GROUPS_COOKIE, SIDEBAR_COOKIE, parseGroups } from "@/lib/sidebar-cookies";
+import {
+  GROUPS_COOKIE,
+  parseGroups,
+  parseWidth,
+  SIDEBAR_COOKIE,
+  WIDTH_COOKIE,
+} from "@/lib/sidebar-cookies";
 import "./globals.css";
 
 const inter = Inter({
@@ -28,6 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const store = await cookies();
   const defaultOpen = store.get(SIDEBAR_COOKIE)?.value !== "closed";
   const defaultExpanded = parseGroups(store.get(GROUPS_COOKIE)?.value);
+  const defaultWidth = parseWidth(store.get(WIDTH_COOKIE)?.value);
 
   return (
     <html
@@ -35,7 +42,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <SidebarProvider defaultOpen={defaultOpen} defaultExpanded={defaultExpanded}>
+        <SidebarProvider
+          defaultOpen={defaultOpen}
+          defaultExpanded={defaultExpanded}
+          defaultWidth={defaultWidth}
+        >
           <AppShell>{children}</AppShell>
         </SidebarProvider>
       </body>
