@@ -7,8 +7,6 @@ import { connectorStatusKey, statusLabels, type ConnectorStatusKey } from "@/lib
 import type { Connector } from "@/lib/mock-data";
 import { ConnectorCategorySection } from "./connector-category-section";
 
-type StatusFilter = "all" | ConnectorStatusKey;
-
 function groupByCategory(connectors: Connector[]) {
   const byCategory = new Map<string, Connector[]>();
   for (const connector of connectors) {
@@ -21,31 +19,26 @@ function groupByCategory(connectors: Connector[]) {
 
 export function ConnectorsBrowser({ connectors }: { connectors: Connector[] }) {
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const [status, setStatus] = useState<ConnectorStatusKey | null>(null);
 
   // Counts against the full roster (not the filtered set) — same convention
   // as the real console's category dropdown, so a filter's count never
   // changes just because another filter narrowed the list.
   const statusFilters = useMemo(() => {
-    const counts = new Map<StatusFilter, number>([["all", connectors.length]]);
+    const counts = new Map<ConnectorStatusKey, number>();
     for (const c of connectors) {
       const key = connectorStatusKey(c);
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    const keys: StatusFilter[] = ["all", ...(Object.keys(statusLabels) as ConnectorStatusKey[])];
-    return keys
+    return (Object.keys(statusLabels) as ConnectorStatusKey[])
       .filter((key) => (counts.get(key) ?? 0) > 0)
-      .map((key) => ({
-        key,
-        label: key === "all" ? "All" : statusLabels[key],
-        count: counts.get(key) ?? 0,
-      }));
+      .map((key) => ({ key, label: statusLabels[key], count: counts.get(key) ?? 0 }));
   }, [connectors]);
 
   const categories = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const filtered = connectors.filter((c) => {
-      if (status !== "all" && connectorStatusKey(c) !== status) return false;
+      if (status !== null && connectorStatusKey(c) !== status) return false;
       if (!needle) return true;
       return (
         c.name.toLowerCase().includes(needle) ||
@@ -80,7 +73,7 @@ export function ConnectorsBrowser({ connectors }: { connectors: Connector[] }) {
             <button
               key={f.key}
               type="button"
-              onClick={() => setStatus(f.key)}
+              onClick={() => setStatus((prev) => (prev === f.key ? null : f.key))}
               aria-pressed={status === f.key}
               className={cn(
                 "flex h-8 items-center gap-1 rounded-full px-3 text-button",
