@@ -153,22 +153,3 @@ export function XIcon(props: IconProps) {
   );
 }
 
-export function ChartIcon(props: IconProps) {
-  return (
-    <IconBase {...props}>
-      <line x1="18" x2="18" y1="20" y2="10" />
-      <line x1="12" x2="12" y1="20" y2="4" />
-      <line x1="6" x2="6" y1="20" y2="14" />
-    </IconBase>
-  );
-}
-
-export function RowsIcon(props: IconProps) {
-  return (
-    <IconBase {...props}>
-      <rect width="18" height="4" x="3" y="3" rx="1" />
-      <rect width="18" height="4" x="3" y="10" rx="1" />
-      <rect width="18" height="4" x="3" y="17" rx="1" />
-    </IconBase>
-  );
-}
