@@ -54,7 +54,10 @@ export function TopBar({ inert }: { inert?: boolean }) {
   const process = section === "processes" && slug ? getProcess(slug) : undefined;
 
   return (
-    <div inert={inert} className="flex h-10 shrink-0 items-center gap-1 px-2">
+    <div
+      inert={inert}
+      className="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2"
+    >
       {/* Only while collapsed — the docked sidebar carries its own toggle. */}
       {!open && (
         <button

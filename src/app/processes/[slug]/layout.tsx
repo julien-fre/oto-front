@@ -8,9 +8,8 @@ export default async function ProcessLayout(props: LayoutProps<"/processes/[slug
   if (!process) notFound();
 
   return (
-    <div className="px-12 pt-3 pb-6">
-      <div className="border-b border-border" />
-      <div className="mt-4">
+    <div className="px-12 pb-6">
+      <div className="pt-4">
         <ProcessTabs slug={slug} />
       </div>
       <div className="mt-8">{props.children}</div>
