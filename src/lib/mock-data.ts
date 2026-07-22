@@ -6,6 +6,23 @@
 // connectors carry Oto's real installation state. Dates are preformatted
 // display strings so server and client can never disagree on locale.
 
+// Identity colors for nested items — the sidebar marks each doc/process with a
+// colored dot so the sub-sections are visually distinct (differentiation, not
+// decoration). Ordered so consecutive items in a section read as clearly
+// different hues; assigned by position for now, user-assignable later like
+// Notion page colors. Every value clears ~3:1 on the gray-2 sidebar.
+export const LABEL_DOT_COLORS = [
+  "#3e63dd", // indigo
+  "#0d9488", // teal
+  "#c2740a", // amber
+  "#e93d82", // pink
+  "#3d9a50", // grass
+  "#0090ff", // blue
+  "#ef5f00", // orange
+  "#6e56cf", // violet
+  "#ab4aba", // plum
+] as const;
+
 export type Doc = {
   slug: string;
   title: string;
@@ -1092,6 +1109,27 @@ export const connectors: Connector[] = [
     personalSession: false,
   },
 ];
+
+// Knowledge is a tree: the section holds category folders, each holding docs.
+// Folder ids match Doc["category"] so a doc always knows its folder.
+export const knowledgeFolders = [
+  { id: "company", label: "Company" },
+  { id: "wiki", label: "Wiki" },
+  { id: "decisions", label: "Decisions" },
+] as const satisfies readonly { id: Doc["category"]; label: string }[];
+
+export const docsInFolder = (category: Doc["category"]) =>
+  docs.filter((d) => d.category === category);
+
+// Identity color by position in the full list, so a doc keeps its color
+// regardless of which folder it sits in.
+export const docColor = (slug: string) =>
+  LABEL_DOT_COLORS[Math.max(0, docs.findIndex((d) => d.slug === slug)) % LABEL_DOT_COLORS.length];
+
+export const processColor = (slug: string) =>
+  LABEL_DOT_COLORS[
+    Math.max(0, processes.findIndex((p) => p.slug === slug)) % LABEL_DOT_COLORS.length
+  ];
 
 export const getDoc = (slug: string) => docs.find((d) => d.slug === slug);
 export const getProcess = (slug: string) => processes.find((p) => p.slug === slug);

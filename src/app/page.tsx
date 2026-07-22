@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHeader } from "@/components/page-header";
 import { connectors, docs, processes } from "@/lib/mock-data";
 
 // title.template in the root layout does not apply to the same segment's page
@@ -31,9 +30,8 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="px-12 pt-2 pb-6">
-      <PageHeader title="Home" />
-      <div className="mt-8 divide-y divide-gray-5 border-y border-gray-5">
+    <div className="px-12 py-6">
+      <div className="divide-y divide-gray-5 border-y border-gray-5">
         {sections.map((section) => (
           <Link
             key={section.href}

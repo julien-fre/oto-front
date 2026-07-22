@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/page-header";
 import { getConnector, getProcess, getSkill } from "@/lib/mock-data";
 
 export async function generateMetadata({ params }: PageProps<"/processes/[slug]">) {
@@ -19,9 +18,8 @@ export default async function ProcessPage({ params }: PageProps<"/processes/[slu
     .filter((c) => c !== undefined);
 
   return (
-    <div className="px-12 pt-2 pb-6">
-      <PageHeader title={process.name} />
-      <p className="mt-4 text-caption">
+    <div className="px-12 py-6">
+      <p className="text-caption">
         <span className={process.status === "active" ? "text-green-11" : "text-muted"}>
           {statusLabel[process.status]}
         </span>
