@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import {
   BookOpenIcon,
-  HouseIcon,
   PanelLeftIcon,
   PlugIcon,
   SearchIcon,
@@ -62,8 +61,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" }) {
         </button>
       </div>
       <nav aria-label="Main" className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-        <div className="flex flex-col gap-1">
-          <NavLink href="/" label="Home" icon={<HouseIcon />} match="exact" />
+        <div className="flex flex-col gap-4">
           <NavSection
             idPrefix={variant}
             id="knowledge"
