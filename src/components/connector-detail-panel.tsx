@@ -23,8 +23,13 @@ const secretKindLabels: Record<string, string> = {
 const linkClassName =
   "text-gray-11 underline decoration-gray-7 underline-offset-2 hover:text-gray-12";
 
-type Tab = "tools" | "access";
-const tabLabels: Record<Tab, string> = { tools: "Tools", access: "AI access" };
+type Tab = "team" | "tools" | "access";
+const tabOrder: Tab[] = ["team", "tools", "access"];
+const tabLabels: Record<Tab, string> = {
+  team: "Team Access",
+  tools: "Tools",
+  access: "AI Access",
+};
 
 export function ConnectorDetailPanel({
   connector,
@@ -147,7 +152,7 @@ export function ConnectorDetailPanel({
           </div>
 
           <div className="mt-6 flex items-center gap-1 border-b border-border">
-            {(["tools", "access"] as const).map((t) => (
+            {tabOrder.map((t) => (
               <button
                 key={t}
                 type="button"
@@ -167,8 +172,38 @@ export function ConnectorDetailPanel({
             ))}
           </div>
 
-          {tab === "tools" ? (
-            connector.namespaces.length > 0 ? (
+          {tab === "team" &&
+            (connector.secretKind !== "none" ? (
+              <div className="mt-4 border-t border-border pt-3">
+                <span className="text-body text-gray-12">Who can access this key</span>
+                <ul className="mt-2 flex flex-col gap-2">
+                  {team.map((person) => (
+                    <li key={person} className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <span className="flex size-6 items-center justify-center rounded-full bg-gray-4 text-caption text-gray-11">
+                          {person.charAt(0)}
+                        </span>
+                        <span className="text-body text-gray-12">{person}</span>
+                      </span>
+                      <Toggle
+                        checked={access[person] ?? false}
+                        onChange={() =>
+                          setAccess((prev) => ({ ...prev, [person]: !prev[person] }))
+                        }
+                        label={`Toggle access for ${person}`}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="mt-4 text-caption text-muted">
+                No credential — nothing to restrict access to.
+              </p>
+            ))}
+
+          {tab === "tools" &&
+            (connector.namespaces.length > 0 ? (
               <div className="mt-4 flex flex-col gap-3">
                 <div className="flex items-center gap-3 text-caption">
                   <button
@@ -214,8 +249,9 @@ export function ConnectorDetailPanel({
               </div>
             ) : (
               <p className="mt-4 text-caption text-muted">No tools resolved for this connector.</p>
-            )
-          ) : (
+            ))}
+
+          {tab === "access" && (
             <div className="mt-4 flex flex-col gap-4">
               <p className="text-body text-gray-11">{authExplain(connector)}</p>
               <div className="flex items-center justify-between border-t border-border pt-3">
@@ -226,63 +262,38 @@ export function ConnectorDetailPanel({
               </div>
 
               {connector.secretKind !== "none" && (
-                <>
-                  <div className="border-t border-border pt-3">
-                    <label htmlFor="connector-api-key" className="text-body text-gray-12">
-                      API key
-                    </label>
-                    <div className="mt-2 flex items-center gap-2">
-                      <input
-                        id="connector-api-key"
-                        type="password"
-                        value={apiKey}
-                        onChange={(e) => {
-                          setApiKey(e.target.value);
-                          setKeySaved(false);
-                        }}
-                        placeholder={`Enter ${secretKindLabels[connector.secretKind] ?? "a credential"}`}
-                        className={cn(
-                          "h-8 min-w-0 flex-1 border border-border bg-background px-2 text-body text-gray-12 placeholder:text-placeholder focus:outline-none",
-                          focusRing,
-                        )}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => apiKey && setKeySaved(true)}
-                        className={cn(
-                          "h-8 shrink-0 rounded-full bg-gray-12 px-3 text-button text-background hover:opacity-90",
-                          focusRing,
-                        )}
-                      >
-                        Save key
-                      </button>
-                    </div>
-                    {keySaved && <p className="mt-2 text-caption text-green-11">Key saved</p>}
+                <div className="border-t border-border pt-3">
+                  <label htmlFor="connector-api-key" className="text-body text-gray-12">
+                    API key
+                  </label>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      id="connector-api-key"
+                      type="password"
+                      value={apiKey}
+                      onChange={(e) => {
+                        setApiKey(e.target.value);
+                        setKeySaved(false);
+                      }}
+                      placeholder={`Enter ${secretKindLabels[connector.secretKind] ?? "a credential"}`}
+                      className={cn(
+                        "h-8 min-w-0 flex-1 border border-border bg-background px-2 text-body text-gray-12 placeholder:text-placeholder focus:outline-none",
+                        focusRing,
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => apiKey && setKeySaved(true)}
+                      className={cn(
+                        "h-8 shrink-0 rounded-full bg-gray-12 px-3 text-button text-background hover:opacity-90",
+                        focusRing,
+                      )}
+                    >
+                      Save key
+                    </button>
                   </div>
-
-                  <div className="border-t border-border pt-3">
-                    <span className="text-body text-gray-12">Who can access this key</span>
-                    <ul className="mt-2 flex flex-col gap-2">
-                      {team.map((person) => (
-                        <li key={person} className="flex items-center justify-between">
-                          <span className="flex items-center gap-2">
-                            <span className="flex size-6 items-center justify-center rounded-full bg-gray-4 text-caption text-gray-11">
-                              {person.charAt(0)}
-                            </span>
-                            <span className="text-body text-gray-12">{person}</span>
-                          </span>
-                          <Toggle
-                            checked={access[person] ?? false}
-                            onChange={() =>
-                              setAccess((prev) => ({ ...prev, [person]: !prev[person] }))
-                            }
-                            label={`Toggle access for ${person}`}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </>
+                  {keySaved && <p className="mt-2 text-caption text-green-11">Key saved</p>}
+                </div>
               )}
             </div>
           )}
