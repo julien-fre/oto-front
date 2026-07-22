@@ -15,11 +15,8 @@ export default async function DocPage({ params }: PageProps<"/knowledge/[slug]">
   const related = doc.links.map(getDoc).filter((d) => d !== undefined);
 
   return (
-    <div className="px-8 py-6">
-      <PageHeader
-        title={doc.title}
-        caption={`${doc.owner} · verified ${doc.verifiedAt}`}
-      />
+    <div className="px-12 pt-2 pb-6">
+      <PageHeader title={doc.title} />
       {doc.sourceOfTruth && (
         <p className="mt-4 text-caption text-muted">Source of truth: {doc.sourceOfTruth}</p>
       )}

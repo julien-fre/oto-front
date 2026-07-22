@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: { absolute: "Home · Oto" } };
 // its own issue; this stub already computes from the workspace objects.
 export default function HomePage() {
   const activeProcesses = processes.filter((p) => p.status === "active");
-  const connected = connectors.filter((c) => c.status === "connected");
+  const connected = connectors.filter((c) => c.status === "active");
   const sections = [
     {
       href: "/knowledge",
@@ -31,8 +31,8 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="px-8 py-6">
-      <PageHeader title="Home" caption="The workspace at a glance." />
+    <div className="px-12 pt-2 pb-6">
+      <PageHeader title="Home" />
       <div className="mt-8 divide-y divide-gray-5 border-y border-gray-5">
         {sections.map((section) => (
           <Link

@@ -29,14 +29,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex h-dvh">
       <Sidebar />
       <div
-        className="flex min-w-0 flex-1 flex-col"
+        className="relative flex min-w-0 flex-1 flex-col"
         inert={mobileOpen || paletteOpen}
       >
-        {/* Reopen affordance: always present on mobile, desktop only when the
-            sidebar is closed. */}
+        {/* Reopen affordance: a normal-flow bar on mobile — the drawer is
+            always closed inline there, so this bar is always present and
+            never shifts anything. On desktop it floats over the content
+            instead of sitting in flow, so toggling the sidebar never moves
+            the page title underneath it. */}
         <div
           className={cn(
             "flex h-12 shrink-0 items-center border-b border-border bg-background px-2",
+            "shell:absolute shell:left-2 shell:top-2 shell:z-10 shell:h-auto shell:w-auto shell:shrink-0 shell:border-0 shell:bg-transparent shell:p-0",
             open && "shell:hidden",
           )}
         >
