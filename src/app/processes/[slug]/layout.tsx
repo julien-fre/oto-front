@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/page-header";
 import { ProcessStatusToggle } from "@/components/process-status-toggle";
 import { ProcessTabs } from "@/components/process-tabs";
 import { ProcessVersionMenu } from "@/components/process-version-menu";
@@ -14,8 +13,7 @@ export default async function ProcessLayout(props: LayoutProps<"/processes/[slug
   return (
     <div className="pb-6">
       <div className="sticky top-0 z-20 bg-background px-12 pt-2">
-        <div className="relative flex items-center justify-between gap-4">
-          <PageHeader title={process.name} />
+        <div className="relative flex items-center justify-end gap-4">
           <div className="flex shrink-0 items-center gap-3">
             <ProcessStatusToggle
               key={`status-${slug}`}

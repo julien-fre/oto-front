@@ -69,7 +69,7 @@ export function ConnectorsBrowser({ connectors }: { connectors: Connector[] }) {
         <div className="flex flex-wrap items-center gap-3">
           <div
             className={cn(
-              "flex h-8 w-64 items-center gap-2 border border-border px-2",
+              "flex h-8 w-64 items-center gap-2 rounded-md border border-border px-2",
               "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus-ring",
             )}
           >

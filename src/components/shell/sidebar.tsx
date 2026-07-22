@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BookOpenIcon,
+  DottedIcon,
+  FileTextIcon,
   PanelLeftIcon,
   PlugIcon,
   SearchIcon,
@@ -12,7 +14,16 @@ import {
 } from "@/components/icons";
 import { OtoMark } from "@/components/oto-mark";
 import { cn, focusRing } from "@/lib/cn";
-import { docs, processes } from "@/lib/mock-data";
+import {
+  docColor,
+  docsInFolder,
+  getDoc,
+  knowledgeFolders,
+  LABEL_DOT_COLORS,
+  processColor,
+  processes,
+} from "@/lib/mock-data";
+import { NavFolder } from "./nav-folder";
 import { NavLink } from "./nav-link";
 import { NavSection } from "./nav-section";
 import { SidebarRail } from "./sidebar-rail";
@@ -77,13 +88,23 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" | "peek" })
             icon={<BookOpenIcon />}
             addLabel="New doc"
           >
-            {docs.map((doc) => (
-              <NavLink
-                key={doc.slug}
-                href={`/knowledge/${doc.slug}`}
-                label={doc.title}
-                indent
-              />
+            {knowledgeFolders.map((folder, i) => (
+              <NavFolder
+                key={folder.id}
+                id={`knowledge-${folder.id}`}
+                label={folder.label}
+                color={LABEL_DOT_COLORS[i % LABEL_DOT_COLORS.length]}
+              >
+                {docsInFolder(folder.id).map((doc) => (
+                  <NavLink
+                    key={doc.slug}
+                    href={`/knowledge/${doc.slug}`}
+                    label={doc.title}
+                    icon={<FileTextIcon style={{ color: docColor(doc.slug) }} />}
+                    indent
+                  />
+                ))}
+              </NavFolder>
             ))}
           </NavSection>
           <NavSection
@@ -101,6 +122,11 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" | "peek" })
                   key={process.slug}
                   href={`/processes/${process.slug}`}
                   label={process.name}
+                  icon={
+                    <DottedIcon color={processColor(process.slug)}>
+                      <SettingsIcon />
+                    </DottedIcon>
+                  }
                   indent
                 />
               ))}
@@ -184,8 +210,13 @@ export function Sidebar() {
   // until the next navigation. The drawer and the peek overlay always close
   // on navigation.
   useEffect(() => {
-    if (pathname.startsWith("/knowledge")) expandGroup("knowledge");
-    else if (pathname.startsWith("/processes")) expandGroup("processes");
+    if (pathname.startsWith("/knowledge")) {
+      expandGroup("knowledge");
+      // Also open the folder holding this doc, so the active row is revealed
+      // rather than hidden inside a collapsed folder.
+      const doc = getDoc(pathname.split("/")[2] ?? "");
+      if (doc) expandGroup(`knowledge-${doc.category}`);
+    } else if (pathname.startsWith("/processes")) expandGroup("processes");
   }, [pathname, expandGroup]);
 
   useEffect(() => {
@@ -215,7 +246,7 @@ export function Sidebar() {
           aria-hidden="true"
           onMouseEnter={handleEdgeEnter}
           onMouseLeave={handleEdgeLeave}
-          className="fixed inset-y-0 left-0 z-30 hidden w-3 shell:block"
+          className="fixed bottom-0 left-0 top-10 z-30 hidden w-3 shell:block"
         />
       )}
       <div
@@ -227,8 +258,10 @@ export function Sidebar() {
         style={{ width: open ? width : 0 }}
         inert={paletteOpen}
       >
+        {/* The docked sidebar carries no surface of its own — it sits on the
+            app background, which the inset page panel is layered over. */}
         {open && (
-          <div className="h-full overflow-hidden border-r border-border bg-gray-2">
+          <div className="h-full overflow-hidden">
             <div
               className="h-full animate-fade-in motion-reduce:animate-none"
               style={{ width }}
@@ -257,8 +290,10 @@ export function Sidebar() {
           inert={!peeking}
           style={{ width: PEEK_WIDTH }}
           className={cn(
-            "fixed inset-y-3 left-3 z-40 hidden overflow-hidden rounded-lg bg-gray-2 shadow-high transition-transform duration-150 ease-out shell:block motion-reduce:transition-none",
-            peeking ? "translate-x-0" : "-translate-x-[calc(100%+0.75rem)]",
+            // Hangs below the top bar so the breadcrumb stays readable, and
+            // sits a touch further left than the page panel it floats over.
+            "fixed bottom-2 left-1 top-11 z-40 hidden overflow-hidden rounded-xl bg-gray-2 shadow-high transition-transform duration-150 ease-out shell:block motion-reduce:transition-none",
+            peeking ? "translate-x-0" : "-translate-x-[calc(100%+0.25rem)]",
           )}
         >
           <SidebarContent variant="peek" />

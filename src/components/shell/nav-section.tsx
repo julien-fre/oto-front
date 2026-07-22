@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { ChevronRightIcon, PlusIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
+import { treeGuide } from "./nav-folder";
 import { useSidebar } from "./sidebar-provider";
 
 export function NavSection({
@@ -88,7 +89,7 @@ export function NavSection({
       <div
         id={groupId}
         hidden={!isExpanded}
-        className="animate-fade-in motion-reduce:animate-none"
+        className={cn(treeGuide, "animate-fade-in motion-reduce:animate-none")}
       >
         {children}
       </div>

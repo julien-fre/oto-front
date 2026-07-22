@@ -2,12 +2,21 @@
 // (write) so names and formats cannot drift.
 
 export const SIDEBAR_COOKIE = "oto_sidebar"; // "open" | "closed"
-export const GROUPS_COOKIE = "oto_sidebar_groups"; // comma-joined expanded group ids
+// v2: the Knowledge section gained category folders, so the set of group ids
+// changed — a new key lets saved state fall back to the new defaults instead
+// of showing the new folders collapsed.
+export const GROUPS_COOKIE = "oto_sidebar_groups_v2"; // comma-joined expanded group ids
 export const WIDTH_COOKIE = "oto_sidebar_width"; // px, as a plain number string
 
 export const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
-export const DEFAULT_EXPANDED = ["knowledge", "processes"];
+export const DEFAULT_EXPANDED = [
+  "knowledge",
+  "processes",
+  "knowledge-company",
+  "knowledge-wiki",
+  "knowledge-decisions",
+];
 
 export const DEFAULT_SIDEBAR_WIDTH = 240; // matches the old fixed w-60
 export const MIN_SIDEBAR_WIDTH = 200;
