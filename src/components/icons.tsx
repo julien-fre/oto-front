@@ -152,3 +152,4 @@ export function XIcon(props: IconProps) {
     </IconBase>
   );
 }
+

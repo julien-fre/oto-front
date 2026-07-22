@@ -31,7 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
       <div
         className={cn(
-          "flex min-w-0 flex-1 flex-col bg-background",
+          "relative flex min-h-0 min-w-0 flex-1 flex-col bg-background",
           "shell:m-2 shell:overflow-hidden shell:rounded-xl shell:border shell:border-border",
         )}
         inert={mobileOpen || paletteOpen}
