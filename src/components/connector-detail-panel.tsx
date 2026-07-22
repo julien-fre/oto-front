@@ -6,16 +6,9 @@ import { ConnectorLogo } from "@/components/connector-logo";
 import { Toggle } from "@/components/toggle";
 import { XIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
-import {
-  accessLevelHints,
-  accessLevelLabels,
-  availableAccessLevels,
-  type AccessLevel,
-} from "@/lib/connector-access-levels";
 import { authExplain } from "@/lib/connector-ai-access";
-import { keyScopeLabel } from "@/lib/connector-key-scope";
 import { connectorStatusKey, statusLabels, statusPillClassName } from "@/lib/connector-status";
-import { connectorUsage, team, type Connector } from "@/lib/mock-data";
+import { connectorUsage, team, teams, type Connector } from "@/lib/mock-data";
 
 const secretKindLabels: Record<string, string> = {
   api_key: "API key",
@@ -36,6 +29,8 @@ const tabLabels: Record<Tab, string> = {
   tools: "Tools",
   access: "AI Access",
 };
+
+type Sharing = "private" | "shared";
 
 export function ConnectorDetailPanel({
   connector,
@@ -67,21 +62,19 @@ export function ConnectorDetailPanel({
   const [enabledNamespaces, setEnabledNamespaces] = useState<Record<string, boolean>>(() =>
     Object.fromEntries((connector?.namespaces ?? []).map((ns) => [ns, true])),
   );
-  const [activeLevel, setActiveLevel] = useState<AccessLevel | null>(() => {
-    const modes = connector?.authModes ?? [];
-    if (modes.includes("byo_user")) return "individual";
-    if (modes.includes("byo_org")) return "org";
-    if (modes.includes("platform")) return "platform";
-    return null;
-  });
-  const [individualOwner, setIndividualOwner] = useState(() => connector?.owner ?? team[0]);
-  const [apiKey, setApiKey] = useState("");
-  const [keySaved, setKeySaved] = useState(false);
+  const [sharing, setSharing] = useState<Sharing>(() =>
+    (connector?.authModes ?? []).includes("byo_org") ? "shared" : "private",
+  );
+  const [enabledTeams, setEnabledTeams] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(teams.map((t) => [t.name, t.members.includes(connector?.owner ?? "")])),
+  );
+  const [enabledIndividuals, setEnabledIndividuals] = useState<Record<string, boolean>>(() => ({
+    [connector?.owner ?? ""]: true,
+  }));
 
   if (!connector) return null;
   const statusKey = connectorStatusKey(connector);
   const usage = connectorUsage(connector.id);
-  const levels = availableAccessLevels(connector);
 
   return (
     <>
@@ -132,9 +125,9 @@ export function ConnectorDetailPanel({
           </div>
 
           <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-            <span className="text-body text-gray-12">API key</span>
-            <span className="rounded-full bg-gray-4 px-2 py-0.5 text-caption text-gray-11">
-              {keyScopeLabel(connector)}
+            <span className="text-body text-gray-12">Access</span>
+            <span className="rounded-full bg-gray-4 px-2 py-0.5 text-caption capitalize text-gray-11">
+              {connector.secretKind === "none" ? "Open data" : sharing}
             </span>
           </div>
 
@@ -185,51 +178,104 @@ export function ConnectorDetailPanel({
           </div>
 
           {tab === "team" &&
-            (levels.length > 0 ? (
-              <div className="mt-4 flex flex-col gap-2">
-                <p className="text-caption text-muted">
-                  The credential can live at any of these levels — the closest one wins.
-                </p>
-                {levels.map((level) => (
-                  <div key={level}>
-                    <button
-                      type="button"
-                      onClick={() => setActiveLevel(level)}
-                      aria-pressed={activeLevel === level}
-                      className={cn(
-                        "flex w-full items-center justify-between rounded-full px-3 py-1.5 text-left text-body",
-                        activeLevel === level
-                          ? "bg-interactive-checked text-gray-12"
-                          : "text-gray-11 hover:bg-interactive-hovered",
-                        focusRing,
-                      )}
-                    >
-                      <span>{accessLevelLabels[level]}</span>
-                      <span className="text-caption text-muted">{accessLevelHints[level]}</span>
-                    </button>
-                    {level === "individual" && activeLevel === "individual" && (
-                      <div className="ml-3 mt-1 flex items-center gap-1">
-                        {team.map((person) => (
-                          <button
-                            key={person}
-                            type="button"
-                            onClick={() => setIndividualOwner(person)}
-                            aria-pressed={individualOwner === person}
-                            className={cn(
-                              "rounded-full px-2 py-0.5 text-caption",
-                              individualOwner === person
-                                ? "bg-interactive-checked text-gray-12"
-                                : "text-muted hover:bg-interactive-hovered",
-                              focusRing,
-                            )}
-                          >
-                            {person}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+            (connector.secretKind !== "none" ? (
+              <div className="mt-4 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    {(["private", "shared"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setSharing(mode)}
+                        aria-pressed={sharing === mode}
+                        className={cn(
+                          "h-7 rounded-full px-3 text-button capitalize",
+                          sharing === mode
+                            ? "bg-interactive-checked text-gray-12"
+                            : "text-muted hover:bg-interactive-hovered",
+                          focusRing,
+                        )}
+                      >
+                        {mode}
+                      </button>
+                    ))}
                   </div>
-                ))}
+                  {sharing === "shared" && (
+                    <div className="flex items-center gap-3 text-caption">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEnabledTeams(Object.fromEntries(teams.map((t) => [t.name, true])));
+                          setEnabledIndividuals(Object.fromEntries(team.map((p) => [p, true])));
+                        }}
+                        className={cn(linkClassName, focusRing)}
+                      >
+                        Enable all
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEnabledTeams(Object.fromEntries(teams.map((t) => [t.name, false])));
+                          setEnabledIndividuals(Object.fromEntries(team.map((p) => [p, false])));
+                        }}
+                        className={cn(linkClassName, focusRing)}
+                      >
+                        Disable all
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {sharing === "private" ? (
+                  <p className="text-caption text-muted">Only you can use this key.</p>
+                ) : (
+                  <>
+                    <div>
+                      <span className="text-body-medium text-gray-12">Teams</span>
+                      <ul className="mt-1 flex flex-col">
+                        {teams.map((t) => (
+                          <li
+                            key={t.name}
+                            className="flex items-center justify-between border-t border-border py-2 first:border-t-0"
+                          >
+                            <span className="text-body text-gray-12">{t.name}</span>
+                            <Toggle
+                              checked={enabledTeams[t.name] ?? false}
+                              onChange={() =>
+                                setEnabledTeams((prev) => ({ ...prev, [t.name]: !prev[t.name] }))
+                              }
+                              label={`Toggle team ${t.name}`}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div>
+                      <span className="text-body-medium text-gray-12">Individuals</span>
+                      <ul className="mt-1 flex flex-col">
+                        {team.map((person) => (
+                          <li
+                            key={person}
+                            className="flex items-center justify-between border-t border-border py-2 first:border-t-0"
+                          >
+                            <span className="text-body text-gray-12">{person}</span>
+                            <Toggle
+                              checked={enabledIndividuals[person] ?? false}
+                              onChange={() =>
+                                setEnabledIndividuals((prev) => ({
+                                  ...prev,
+                                  [person]: !prev[person],
+                                }))
+                              }
+                              label={`Toggle access for ${person}`}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <p className="mt-4 text-caption text-muted">
@@ -288,57 +334,13 @@ export function ConnectorDetailPanel({
 
           {tab === "access" && (
             <div className="mt-4 flex flex-col gap-4">
-              <p className="text-body text-gray-11">{authExplain(connector)}</p>
+              <p className="text-body text-gray-11">{authExplain(connector, sharing)}</p>
               <div className="flex items-center justify-between border-t border-border pt-3">
                 <span className="text-body text-gray-12">Credential type</span>
                 <span className="text-body text-gray-11">
                   {secretKindLabels[connector.secretKind] ?? connector.secretKind}
                 </span>
               </div>
-
-              {connector.secretKind !== "none" &&
-                (activeLevel === "platform" ? (
-                  <p className="border-t border-border pt-3 text-caption text-muted">
-                    {accessLevelHints.platform}
-                  </p>
-                ) : (
-                  <div className="border-t border-border pt-3">
-                    <label htmlFor="connector-api-key" className="text-body text-gray-12">
-                      {activeLevel === "individual"
-                        ? `${individualOwner}'s API key`
-                        : activeLevel === "org"
-                          ? "Org API key"
-                          : "API key"}
-                    </label>
-                    <div className="mt-2 flex items-center gap-2">
-                      <input
-                        id="connector-api-key"
-                        type="password"
-                        value={apiKey}
-                        onChange={(e) => {
-                          setApiKey(e.target.value);
-                          setKeySaved(false);
-                        }}
-                        placeholder={`Enter ${secretKindLabels[connector.secretKind] ?? "a credential"}`}
-                        className={cn(
-                          "h-8 min-w-0 flex-1 border border-border bg-background px-2 text-body text-gray-12 placeholder:text-placeholder focus:outline-none",
-                          focusRing,
-                        )}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => apiKey && setKeySaved(true)}
-                        className={cn(
-                          "h-8 shrink-0 rounded-full bg-gray-12 px-3 text-button text-background hover:opacity-90",
-                          focusRing,
-                        )}
-                      >
-                        Save key
-                      </button>
-                    </div>
-                    {keySaved && <p className="mt-2 text-caption text-green-11">Key saved</p>}
-                  </div>
-                ))}
             </div>
           )}
         </div>

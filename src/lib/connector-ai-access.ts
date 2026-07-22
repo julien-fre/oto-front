@@ -1,4 +1,3 @@
-import { keyScopeLabel } from "@/lib/connector-key-scope";
 import type { Connector } from "@/lib/mock-data";
 
 const secretKindNouns: Record<string, string> = {
@@ -10,11 +9,11 @@ const secretKindNouns: Record<string, string> = {
   none: "no credential",
 };
 
-// One sentence on how the agent actually authenticates for this connector —
-// derived from the real secretKind/personalSession/authModes, not invented.
-// Tone borrows from the real console's own connect explainer, rewritten
-// fresh in English for this tab.
-export function authExplain(connector: Connector): string {
+// One sentence on how the agent authenticates for this connector, given the
+// real secretKind/personalSession plus whichever sharing mode is currently
+// selected in the Team Access tab (single source of truth — this doesn't
+// re-derive its own notion of shared/private).
+export function authExplain(connector: Connector, sharing: "private" | "shared"): string {
   const cred = secretKindNouns[connector.secretKind] ?? connector.secretKind;
   if (connector.secretKind === "none") {
     return "The agent reads open data here — no credential is required.";
@@ -22,12 +21,7 @@ export function authExplain(connector: Connector): string {
   if (connector.personalSession) {
     return `The agent connects with ${cred}, using your own personal session — never shared with your org.`;
   }
-  const scope = keyScopeLabel(connector);
-  if (scope === "Shared") {
-    return `The agent connects with ${cred} shared across your org.`;
-  }
-  if (scope === "Private") {
-    return `The agent connects with ${cred} that belongs to you personally.`;
-  }
-  return `The agent connects with ${cred}.`;
+  return sharing === "shared"
+    ? `The agent connects with ${cred} shared across your workspace.`
+    : `The agent connects with ${cred} that belongs to you personally.`;
 }

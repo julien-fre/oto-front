@@ -1104,3 +1104,11 @@ export const connectorUsage = (connectorId: string): Process[] =>
 // The only two people in this mock workspace — reused wherever a connector
 // needs an access-grant list, not a magic array inlined at the call site.
 export const team = ["Alessandro", "Julien"] as const;
+
+// Lightweight team groupings for connector sharing scope — split along the
+// same lines the rest of the mock data already implies (Alessandro owns the
+// GTM-flavored docs/processes, Julien the ops/eng-flavored ones).
+export const teams: { name: string; members: string[] }[] = [
+  { name: "GTM", members: ["Alessandro"] },
+  { name: "Ops", members: ["Julien"] },
+];
