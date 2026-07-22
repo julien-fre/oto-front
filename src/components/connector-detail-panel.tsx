@@ -6,6 +6,12 @@ import { ConnectorLogo } from "@/components/connector-logo";
 import { Toggle } from "@/components/toggle";
 import { XIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
+import {
+  accessLevelHints,
+  accessLevelLabels,
+  availableAccessLevels,
+  type AccessLevel,
+} from "@/lib/connector-access-levels";
 import { authExplain } from "@/lib/connector-ai-access";
 import { keyScopeLabel } from "@/lib/connector-key-scope";
 import { connectorStatusKey, statusLabels, statusPillClassName } from "@/lib/connector-status";
@@ -61,15 +67,21 @@ export function ConnectorDetailPanel({
   const [enabledNamespaces, setEnabledNamespaces] = useState<Record<string, boolean>>(() =>
     Object.fromEntries((connector?.namespaces ?? []).map((ns) => [ns, true])),
   );
-  const [access, setAccess] = useState<Record<string, boolean>>(() => ({
-    [connector?.owner ?? ""]: true,
-  }));
+  const [activeLevel, setActiveLevel] = useState<AccessLevel | null>(() => {
+    const modes = connector?.authModes ?? [];
+    if (modes.includes("byo_user")) return "individual";
+    if (modes.includes("byo_org")) return "org";
+    if (modes.includes("platform")) return "platform";
+    return null;
+  });
+  const [individualOwner, setIndividualOwner] = useState(() => connector?.owner ?? team[0]);
   const [apiKey, setApiKey] = useState("");
   const [keySaved, setKeySaved] = useState(false);
 
   if (!connector) return null;
   const statusKey = connectorStatusKey(connector);
   const usage = connectorUsage(connector.id);
+  const levels = availableAccessLevels(connector);
 
   return (
     <>
@@ -173,32 +185,55 @@ export function ConnectorDetailPanel({
           </div>
 
           {tab === "team" &&
-            (connector.secretKind !== "none" ? (
-              <div className="mt-4 border-t border-border pt-3">
-                <span className="text-body text-gray-12">Who can access this key</span>
-                <ul className="mt-2 flex flex-col gap-2">
-                  {team.map((person) => (
-                    <li key={person} className="flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <span className="flex size-6 items-center justify-center rounded-full bg-gray-4 text-caption text-gray-11">
-                          {person.charAt(0)}
-                        </span>
-                        <span className="text-body text-gray-12">{person}</span>
-                      </span>
-                      <Toggle
-                        checked={access[person] ?? false}
-                        onChange={() =>
-                          setAccess((prev) => ({ ...prev, [person]: !prev[person] }))
-                        }
-                        label={`Toggle access for ${person}`}
-                      />
-                    </li>
-                  ))}
-                </ul>
+            (levels.length > 0 ? (
+              <div className="mt-4 flex flex-col gap-2">
+                <p className="text-caption text-muted">
+                  The credential can live at any of these levels — the closest one wins.
+                </p>
+                {levels.map((level) => (
+                  <div key={level}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveLevel(level)}
+                      aria-pressed={activeLevel === level}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-full px-3 py-1.5 text-left text-body",
+                        activeLevel === level
+                          ? "bg-interactive-checked text-gray-12"
+                          : "text-gray-11 hover:bg-interactive-hovered",
+                        focusRing,
+                      )}
+                    >
+                      <span>{accessLevelLabels[level]}</span>
+                      <span className="text-caption text-muted">{accessLevelHints[level]}</span>
+                    </button>
+                    {level === "individual" && activeLevel === "individual" && (
+                      <div className="ml-3 mt-1 flex items-center gap-1">
+                        {team.map((person) => (
+                          <button
+                            key={person}
+                            type="button"
+                            onClick={() => setIndividualOwner(person)}
+                            aria-pressed={individualOwner === person}
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-caption",
+                              individualOwner === person
+                                ? "bg-interactive-checked text-gray-12"
+                                : "text-muted hover:bg-interactive-hovered",
+                              focusRing,
+                            )}
+                          >
+                            {person}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="mt-4 text-caption text-muted">
-                No credential — nothing to restrict access to.
+                No credential — nothing to scope access to.
               </p>
             ))}
 
@@ -261,40 +296,49 @@ export function ConnectorDetailPanel({
                 </span>
               </div>
 
-              {connector.secretKind !== "none" && (
-                <div className="border-t border-border pt-3">
-                  <label htmlFor="connector-api-key" className="text-body text-gray-12">
-                    API key
-                  </label>
-                  <div className="mt-2 flex items-center gap-2">
-                    <input
-                      id="connector-api-key"
-                      type="password"
-                      value={apiKey}
-                      onChange={(e) => {
-                        setApiKey(e.target.value);
-                        setKeySaved(false);
-                      }}
-                      placeholder={`Enter ${secretKindLabels[connector.secretKind] ?? "a credential"}`}
-                      className={cn(
-                        "h-8 min-w-0 flex-1 border border-border bg-background px-2 text-body text-gray-12 placeholder:text-placeholder focus:outline-none",
-                        focusRing,
-                      )}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => apiKey && setKeySaved(true)}
-                      className={cn(
-                        "h-8 shrink-0 rounded-full bg-gray-12 px-3 text-button text-background hover:opacity-90",
-                        focusRing,
-                      )}
-                    >
-                      Save key
-                    </button>
+              {connector.secretKind !== "none" &&
+                (activeLevel === "platform" ? (
+                  <p className="border-t border-border pt-3 text-caption text-muted">
+                    {accessLevelHints.platform}
+                  </p>
+                ) : (
+                  <div className="border-t border-border pt-3">
+                    <label htmlFor="connector-api-key" className="text-body text-gray-12">
+                      {activeLevel === "individual"
+                        ? `${individualOwner}'s API key`
+                        : activeLevel === "org"
+                          ? "Org API key"
+                          : "API key"}
+                    </label>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        id="connector-api-key"
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => {
+                          setApiKey(e.target.value);
+                          setKeySaved(false);
+                        }}
+                        placeholder={`Enter ${secretKindLabels[connector.secretKind] ?? "a credential"}`}
+                        className={cn(
+                          "h-8 min-w-0 flex-1 border border-border bg-background px-2 text-body text-gray-12 placeholder:text-placeholder focus:outline-none",
+                          focusRing,
+                        )}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => apiKey && setKeySaved(true)}
+                        className={cn(
+                          "h-8 shrink-0 rounded-full bg-gray-12 px-3 text-button text-background hover:opacity-90",
+                          focusRing,
+                        )}
+                      >
+                        Save key
+                      </button>
+                    </div>
+                    {keySaved && <p className="mt-2 text-caption text-green-11">Key saved</p>}
                   </div>
-                  {keySaved && <p className="mt-2 text-caption text-green-11">Key saved</p>}
-                </div>
-              )}
+                ))}
             </div>
           )}
         </div>

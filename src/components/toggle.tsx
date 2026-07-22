@@ -19,14 +19,14 @@ export function Toggle({
       aria-label={label}
       onClick={onChange}
       className={cn(
-        "relative h-5 w-9 shrink-0 rounded-full transition-colors",
+        "inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
         checked ? "bg-green-9" : "bg-gray-6",
         focusRing,
       )}
     >
       <span
         className={cn(
-          "absolute top-0.5 size-4 rounded-full bg-background transition-transform",
+          "inline-block size-4 rounded-full bg-background transition-transform",
           checked ? "translate-x-4" : "translate-x-0.5",
         )}
       />
