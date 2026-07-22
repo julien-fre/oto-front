@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { ProcessStatusToggle } from "@/components/process-status-toggle";
 import { ProcessTabs } from "@/components/process-tabs";
 import { cn, focusRing } from "@/lib/cn";
 import { getProcess } from "@/lib/mock-data";
-
-const statusLabel = { active: "Active", draft: "Draft", deprecated: "Deprecated" } as const;
 
 export default async function ProcessLayout(props: LayoutProps<"/processes/[slug]">) {
   const { slug } = await props.params;
@@ -16,17 +15,10 @@ export default async function ProcessLayout(props: LayoutProps<"/processes/[slug
       <div className="flex items-center justify-between gap-4">
         <PageHeader title={process.name} />
         <div className="flex shrink-0 items-center gap-3">
-          <p className="whitespace-nowrap text-caption">
-            <span className={process.status === "active" ? "text-green-11" : "text-muted"}>
-              {statusLabel[process.status]}
-            </span>
-            <span className="text-muted">
-              {" · "}
-              {process.schedule ?? "Manual"}
-              {" · "}
-              {process.owner}
-            </span>
-          </p>
+          <ProcessStatusToggle key={slug} initialActive={process.status === "active"} />
+          <span className="whitespace-nowrap text-caption text-muted">
+            {process.schedule ?? "Manual"}
+          </span>
           <button
             type="button"
             className={cn(
