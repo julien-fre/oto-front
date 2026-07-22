@@ -12,7 +12,7 @@ export default async function ProcessLayout(props: LayoutProps<"/processes/[slug
 
   return (
     <div className="pb-6">
-      <div className="sticky top-0 z-20 bg-background px-12 pt-2">
+      <div className="sticky top-0 z-20 bg-background px-12 pt-1">
         <div className="relative flex items-center justify-end gap-4">
           <div className="flex shrink-0 items-center gap-3">
             <ProcessStatusToggle
