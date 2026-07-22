@@ -43,27 +43,28 @@ function crumbsFor(pathname: string): Crumb[] {
   return [];
 }
 
-export function TopBar({ inert }: { inert?: boolean }) {
+export function TopBar() {
   const pathname = usePathname();
   const { open, toggleNav } = useSidebar();
   const crumbs = crumbsFor(pathname);
 
   return (
-    <div inert={inert} className="flex h-10 shrink-0 items-center gap-1 px-2">
-      {/* Only while collapsed — the docked sidebar carries its own toggle. */}
-      {!open && (
-        <button
-          type="button"
-          onClick={() => toggleNav("button")}
-          aria-label="Open sidebar"
-          className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-full text-icon transition-[background-color,scale] duration-100 hover:bg-interactive-hovered active:scale-95 motion-reduce:transition-none",
-            focusRing,
-          )}
-        >
-          <PanelLeftIcon />
-        </button>
-      )}
+    <div className="flex h-10 shrink-0 items-center gap-1 px-2">
+      {/* Below the shell breakpoint this is the only way to reach the drawer,
+          so it is always there; on desktop the docked sidebar carries its own
+          collapse button, so it appears only while collapsed. */}
+      <button
+        type="button"
+        onClick={() => toggleNav("button")}
+        aria-label="Open sidebar"
+        className={cn(
+          "flex size-7 shrink-0 items-center justify-center rounded-full text-icon transition-[background-color,scale] duration-100 hover:bg-interactive-hovered active:scale-95 motion-reduce:transition-none",
+          open && "shell:hidden",
+          focusRing,
+        )}
+      >
+        <PanelLeftIcon />
+      </button>
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1 px-1">
         {crumbs.map((crumb, i) => {
           const last = i === crumbs.length - 1;

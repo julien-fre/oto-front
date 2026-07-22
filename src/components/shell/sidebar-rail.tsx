@@ -97,7 +97,7 @@ export function SidebarRail({
         // inset by 8px (layout.page-inset), so the handle is pushed out by the
         // same amount and stops at the panel's bottom. The line you grab is
         // then exactly the edge you appear to be dragging.
-        "group absolute -right-2 bottom-2 top-0 z-10 w-2.5 translate-x-1/2 cursor-col-resize",
+        "group absolute inset-y-2 -right-2 z-10 w-2.5 translate-x-1/2 cursor-col-resize",
         focusRing,
       )}
     >

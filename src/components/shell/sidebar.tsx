@@ -246,7 +246,7 @@ export function Sidebar() {
           aria-hidden="true"
           onMouseEnter={handleEdgeEnter}
           onMouseLeave={handleEdgeLeave}
-          className="fixed bottom-0 left-0 top-10 z-30 hidden w-3 shell:block"
+          className="fixed bottom-0 left-0 top-13 z-30 hidden w-3 shell:block"
         />
       )}
       <div
@@ -291,9 +291,10 @@ export function Sidebar() {
           inert={!peeking}
           style={{ width: PEEK_WIDTH }}
           className={cn(
-            // Hangs below the top bar so the breadcrumb stays readable, and
-            // sits a touch further left than the page panel it floats over.
-            "fixed bottom-2 left-1 top-11 z-40 hidden overflow-hidden rounded-xl bg-gray-2 shadow-high transition-transform duration-150 ease-out shell:block motion-reduce:transition-none",
+            // Hangs below the page panel's breadcrumb bar so it stays
+            // readable, and sits a touch further left than the panel it
+            // floats over.
+            "fixed bottom-2 left-1 top-13 z-40 hidden overflow-hidden rounded-xl bg-gray-2 shadow-high transition-transform duration-150 ease-out shell:block motion-reduce:transition-none",
             peeking ? "translate-x-0" : "-translate-x-[calc(100%+0.25rem)]",
           )}
         >
