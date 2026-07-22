@@ -164,23 +164,22 @@ export function Sidebar() {
         inert={paletteOpen}
       >
         {open ? (
-          <>
-            <div className="h-full overflow-hidden">
-              <div className="h-full w-full animate-fade-in motion-reduce:animate-none">
-                <SidebarContent variant="desktop" />
-              </div>
+          <div className="h-full overflow-hidden">
+            <div className="h-full w-full animate-fade-in motion-reduce:animate-none">
+              <SidebarContent variant="desktop" />
             </div>
-            <SidebarRail
-              width={width}
-              onResize={setWidth}
-              onToggle={() => toggleNav("button")}
-              onDragStart={() => setResizing(true)}
-              onDragEnd={() => setResizing(false)}
-            />
-          </>
+          </div>
         ) : (
           <Rail />
         )}
+        <SidebarRail
+          open={open}
+          width={width}
+          onResize={setWidth}
+          onToggle={() => toggleNav("button")}
+          onDragStart={() => setResizing(true)}
+          onDragEnd={() => setResizing(false)}
+        />
       </div>
       <div className="shell:hidden">
         <div
