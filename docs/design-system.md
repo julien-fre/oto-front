@@ -9,8 +9,8 @@ colors:
   border: "#d9d9d9"
   muted: "#626262"
   icon: "#626262"
-  placeholder: "#8c8c8c"
-  focus-ring: "#8ec8f6"
+  placeholder: "#707070" # darkened from gray-9 for WCAG AA text contrast (4.7:1 on gray-2)
+  focus-ring: "#0090ff" # blue-9; blue-7 fails the 3:1 non-text contrast minimum for focus indicators
   interactive-hovered: "#0000000e"
   interactive-checked: "#00000016"
 
@@ -34,6 +34,7 @@ colors:
   green-9: "#30a46c"
   green-11: "#218358"
   blue-7: "#8ec8f6"
+  blue-9: "#0090ff"
   yellow-9: "#ffe629"
   yellow-11: "#9e6c00"
   amber-9: "#ffc53d"
@@ -130,13 +131,13 @@ The app background is white (`{colors.background}` #ffffff). Each gray scale ste
 - `5`: structural borders and separators
 - `6`: interactive borders, inputs, textareas, checkboxes, neutral CTAs
 - `7`: hover of `6`
-- `9`: placeholders and empty interactive text
+- `9`: placeholders and empty interactive text — for text, use the `placeholder` token (#707070), darkened off this step to clear WCAG AA
 - `11`: muted text, captions, secondary labels
 - `12`: primary text, body, titles, badges
 
 `interactive-hovered` / `interactive-checked` are translucent black overlays, use them for hover states and overlays that layer cleanly over any surface.
 
-Chromatic scales carry meaning only, never decoration. Red for errors, green for success, amber for warnings, blue-7 for focus rings.
+Chromatic scales carry meaning only, never decoration. Red for errors, green for success, amber for warnings, blue-9 for focus rings (blue-7 is too light to meet the 3:1 non-text contrast minimum against white or gray-2).
 
 ## Typography
 

@@ -6,8 +6,10 @@
   --border: #d9d9d9;
   --muted: #626262;
   --icon: #626262;
-  --placeholder: #8c8c8c;
-  --focus-ring: #8ec8f6;
+  /* placeholder and focus-ring are darkened off their scale steps (gray-9,
+     blue-7) to clear WCAG AA contrast on white and gray-2 surfaces */
+  --placeholder: #707070;
+  --focus-ring: #0090ff;
   --interactive-hovered: #0000000e;
   --interactive-checked: #00000016;
 
@@ -29,6 +31,7 @@
   --green-9: #30a46c;
   --green-11: #218358;
   --blue-7: #8ec8f6;
+  --blue-9: #0090ff;
   --yellow-9: #ffe629;
   --yellow-11: #9e6c00;
   --amber-9: #ffc53d;
@@ -40,6 +43,10 @@
 @theme inline {
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
+
+  /* App-shell breakpoint — sidebar column above, overlay drawer below.
+     Mirrored in MOBILE_QUERY in src/components/shell/sidebar-provider.tsx */
+  --breakpoint-shell: 52rem;
 
   --color-background: var(--background);
   --color-border: var(--border);
@@ -68,6 +75,7 @@
   --color-green-9: var(--green-9);
   --color-green-11: var(--green-11);
   --color-blue-7: var(--blue-7);
+  --color-blue-9: var(--blue-9);
   --color-yellow-9: var(--yellow-9);
   --color-yellow-11: var(--yellow-11);
   --color-amber-9: var(--amber-9);
