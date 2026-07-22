@@ -23,7 +23,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" | "peek" })
 
   return (
     <div className={cn("flex h-full flex-col", variant === "desktop" ? "w-full" : "w-60")}>
-      <div className="flex h-12 shrink-0 items-center gap-1 px-2">
+      <div className="flex h-12 shrink-0 items-center gap-1 px-3">
         <button
           type="button"
           aria-haspopup="menu"
@@ -53,7 +53,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" | "peek" })
           <PanelLeftIcon />
         </button>
       </div>
-      <div className="px-2 pb-2">
+      <div className="px-3 pb-2">
         <button
           type="button"
           onClick={() => setPaletteOpen(true)}
@@ -67,7 +67,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" | "peek" })
           <span className="ml-auto text-caption text-placeholder">⌘K</span>
         </button>
       </div>
-      <nav aria-label="Main" className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+      <nav aria-label="Main" className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
         <div className="flex flex-col gap-4">
           <NavSection
             idPrefix={variant}
@@ -108,7 +108,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" | "peek" })
           <NavLink href="/connectors" label="Connectors" icon={<PlugIcon />} />
         </div>
       </nav>
-      <div className="flex shrink-0 flex-col gap-1 border-t border-border p-2">
+      <div className="flex shrink-0 flex-col gap-1 border-t border-border p-3">
         <NavLink href="/settings" label="Settings" icon={<SettingsIcon />} />
         <button
           type="button"
