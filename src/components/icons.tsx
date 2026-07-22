@@ -126,3 +126,13 @@ export function ChartIcon(props: IconProps) {
     </IconBase>
   );
 }
+
+export function RowsIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <rect width="18" height="4" x="3" y="3" rx="1" />
+      <rect width="18" height="4" x="3" y="10" rx="1" />
+      <rect width="18" height="4" x="3" y="17" rx="1" />
+    </IconBase>
+  );
+}
