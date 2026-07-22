@@ -19,7 +19,7 @@ export function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label="Search"
-        className="relative mx-auto mt-[15vh] w-full max-w-xl animate-panel-in rounded-none bg-background shadow-dropdown motion-reduce:animate-none"
+        className="relative mx-auto mt-[15vh] w-full max-w-xl animate-panel-in overflow-hidden rounded-xl bg-background shadow-dropdown motion-reduce:animate-none"
       >
         <div className="flex h-12 items-center gap-2 border-b border-border px-4">
           <SearchIcon className="shrink-0 text-icon" />

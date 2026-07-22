@@ -105,7 +105,7 @@ export function ConnectorDetailPanel({
         role="dialog"
         aria-modal="true"
         aria-label={connector.name}
-        className="fixed inset-y-0 right-0 z-40 flex w-96 flex-col border-l border-border bg-background shadow-high"
+        className="fixed inset-y-2 right-2 z-40 flex w-96 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-high"
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
           <div className="flex min-w-0 items-start gap-3">
@@ -153,7 +153,7 @@ export function ConnectorDetailPanel({
                 <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
                 <div
                   role="menu"
-                  className="absolute right-0 top-full z-20 mt-1 w-32 border border-border bg-background py-1 shadow-dropdown"
+                  className="absolute right-0 top-full z-20 mt-1 w-32 rounded-lg border border-border bg-background py-1 shadow-dropdown"
                 >
                   {statusActions(status).map((a) => (
                     <button

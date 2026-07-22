@@ -22,10 +22,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [open, consumeNavHandoff]);
 
   return (
-    <div className="flex h-dvh">
+    // The app background is the sidebar's surface; the page sits on top of it
+    // as an inset, rounded panel, so the sidebar appears to wrap around the
+    // content. Full-bleed below the shell breakpoint, where there is no
+    // sidebar beside it to wrap anything.
+    <div className="flex h-dvh bg-gray-2">
       <Sidebar />
       <div
-        className="relative flex min-w-0 flex-1 flex-col"
+        className={cn(
+          "relative flex min-w-0 flex-1 flex-col bg-background",
+          "shell:m-2 shell:overflow-hidden shell:rounded-xl shell:border shell:border-border",
+        )}
         inert={mobileOpen || paletteOpen}
       >
         {/* The drawer/reopen trigger: a normal-flow bar on mobile — the

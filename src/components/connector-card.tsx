@@ -16,7 +16,7 @@ export function ConnectorCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "rounded-none border border-border p-3 text-left hover:bg-gray-2",
+        "rounded-lg border border-border p-3 text-left hover:bg-gray-2",
         focusRing,
       )}
     >

@@ -258,8 +258,10 @@ export function Sidebar() {
         style={{ width: open ? width : 0 }}
         inert={paletteOpen}
       >
+        {/* The docked sidebar carries no surface of its own — it sits on the
+            app background, which the inset page panel is layered over. */}
         {open && (
-          <div className="h-full overflow-hidden border-r border-border bg-gray-2">
+          <div className="h-full overflow-hidden">
             <div
               className="h-full animate-fade-in motion-reduce:animate-none"
               style={{ width }}

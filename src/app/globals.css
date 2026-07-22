@@ -50,6 +50,13 @@
      Mirrored in MOBILE_QUERY in src/components/shell/sidebar-provider.tsx */
   --breakpoint-shell: 52rem;
 
+  /* Radius — surfaces are rounded, not sharp. Pills stay for nav rows,
+     chips, and icon buttons; every other surface takes a step from here. */
+  --radius-sm: 4px; /* small controls, tags */
+  --radius-md: 6px; /* inputs, buttons */
+  --radius-lg: 8px; /* cards, menus, popovers */
+  --radius-xl: 12px; /* page surface, modals, the command palette */
+
   --color-background: var(--background);
   --color-border: var(--border);
   --color-muted: var(--muted);

@@ -69,7 +69,7 @@ export function ConnectorCredentialModal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="fixed left-1/2 top-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 border border-border bg-background p-4 shadow-high"
+        className="fixed left-1/2 top-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-background p-4 shadow-high"
       >
         <div className="flex items-center justify-between">
           <p className="text-body-medium text-gray-12">{title}</p>
@@ -108,7 +108,7 @@ export function ConnectorCredentialModal({
                     ref={i === 0 ? firstFieldRef : undefined}
                     type={field.type}
                     className={cn(
-                      "mt-1 h-8 w-full border border-border bg-background px-2 text-body text-gray-12 placeholder:text-placeholder focus:outline-none",
+                      "mt-1 h-8 w-full rounded-md border border-border bg-background px-2 text-body text-gray-12 placeholder:text-placeholder focus:outline-none",
                       focusRing,
                     )}
                   />

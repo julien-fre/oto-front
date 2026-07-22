@@ -76,6 +76,10 @@ typography:
 
 rounded:
   none: 0px
+  sm: 4px
+  md: 6px
+  lg: 8px
+  xl: 12px
   full: 9999px
 
 spacing:
@@ -183,12 +187,27 @@ Don't add shadows to cards or static surfaces, only to floating surfaces (dropdo
 
 ## Shapes
 
-Exactly two border radius values. Everything interactive is pill-shaped. Everything else is sharp.
+Surfaces are rounded, not sharp. Pills stay for the things you click directly;
+everything that holds content takes a step from the radius scale.
 
-- Buttons, badges, tags: `{rounded.full}` (9999px)
-- Inputs, textareas, and all other elements: `{rounded.none}` (0px)
+- Nav rows, buttons, badges, tags, avatars, icon buttons: `{rounded.full}` (9999px)
+- Small controls and tags that are not pills: `{rounded.sm}` (4px)
+- Inputs and text fields: `{rounded.md}` (6px)
+- Cards, menus, popovers: `{rounded.lg}` (8px)
+- Page surface, modals, side panels, command palette: `{rounded.xl}` (12px)
+- Full-bleed dividers and edge-to-edge lists: `{rounded.none}` (0px)
 
-Never introduce intermediate radius values.
+Use the scale, never a value outside it. When surfaces nest, the inner one takes
+the next step down so the corners stay concentric.
+
+## The page surface
+
+The app background is `{colors.gray-2}` — the same surface the sidebar sits on. The
+page is a white panel inset 8px from the edges with `{rounded.xl}` corners and a 1px
+border, layered over that background. The sidebar carries no surface or border of its
+own, so it reads as a frame wrapping around the page rather than a column bolted
+beside it. Below the shell breakpoint the page goes full-bleed, since there is no
+sidebar next to it to wrap anything.
 
 ## Voice & Content
 
