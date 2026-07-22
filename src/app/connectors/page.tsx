@@ -1,52 +1,35 @@
 import type { Metadata } from "next";
+import { ConnectorCategorySection } from "@/components/connector-category-section";
 import { PageHeader } from "@/components/page-header";
-import { connectors, connectorUsage } from "@/lib/mock-data";
-import type { Connector } from "@/lib/mock-data";
+import { connectors } from "@/lib/mock-data";
 
 export const metadata: Metadata = { title: "Connectors" };
 
-function statusDisplay(connector: Connector): { label: string; className: string } {
-  if (connector.condition === "degraded")
-    return { label: "Degraded", className: "text-amber-11" };
-  switch (connector.status) {
-    case "connected":
-      return { label: "Connected", className: "text-green-11" };
-    case "pending":
-      return { label: "Pending access", className: "text-amber-11" };
-    case "empty":
-      return { label: "Connected, no data", className: "text-muted" };
-    case "disconnected":
-      return { label: "Not connected", className: "text-muted" };
+// Same grouping/sort as the real console's category filter: by count desc.
+function groupByCategory() {
+  const byCategory = new Map<string, typeof connectors>();
+  for (const connector of connectors) {
+    const group = byCategory.get(connector.category);
+    if (group) group.push(connector);
+    else byCategory.set(connector.category, [connector]);
   }
+  return [...byCategory.entries()].sort((a, b) => b[1].length - a[1].length);
 }
 
 export default function ConnectorsPage() {
+  const categories = groupByCategory();
+
   return (
     <div className="px-12 pt-2 pb-6">
       <PageHeader title="Connectors" />
-      <div className="mt-8 divide-y divide-gray-5 border-y border-gray-5">
-        {connectors.map((connector) => {
-          const status = statusDisplay(connector);
-          const usage = connectorUsage(connector.id);
-          return (
-            <div key={connector.id} className="flex items-baseline gap-4 px-2 py-2">
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-body text-gray-12">
-                  {connector.name}
-                </span>
-                <span className="block truncate text-caption text-muted">
-                  {connector.description}
-                </span>
-              </span>
-              <span className="shrink-0 text-caption text-muted">
-                {usage === 1 ? "1 process" : `${usage} processes`}
-              </span>
-              <span className={`w-32 shrink-0 text-right text-caption ${status.className}`}>
-                {status.label}
-              </span>
-            </div>
-          );
-        })}
+      <div className="mt-8 flex flex-col gap-6">
+        {categories.map(([category, categoryConnectors]) => (
+          <ConnectorCategorySection
+            key={category}
+            category={category}
+            connectors={categoryConnectors}
+          />
+        ))}
       </div>
     </div>
   );
