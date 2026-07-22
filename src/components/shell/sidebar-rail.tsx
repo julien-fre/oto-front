@@ -6,6 +6,9 @@ import { MAX_SIDEBAR_WIDTH, MIN_SIDEBAR_WIDTH } from "@/lib/sidebar-cookies";
 
 const DRAG_THRESHOLD = 4; // px of movement before a press counts as a resize, not a click
 const KEYBOARD_STEP = 16;
+// Drag the rail past this and the sidebar snaps shut instead of just
+// clamping at the minimum width — matches Linear's "drag it closed" feel.
+const COLLAPSE_THRESHOLD = MIN_SIDEBAR_WIDTH - 60;
 
 // The edge handle a Linear-style sidebar exposes: drag it to resize, click it
 // (no movement) to collapse/expand, arrow keys to resize when focused. ARIA
@@ -24,24 +27,36 @@ export function SidebarRail({
   onDragEnd: () => void;
 }) {
   const moved = useRef(false);
+  const collapsed = useRef(false);
 
   function handlePointerDown(e: React.PointerEvent) {
     if (e.button !== 0) return;
     const startX = e.clientX;
     const startWidth = width;
     moved.current = false;
+    collapsed.current = false;
     onDragStart();
 
-    function onPointerMove(ev: PointerEvent) {
-      const delta = ev.clientX - startX;
-      if (Math.abs(delta) > DRAG_THRESHOLD) moved.current = true;
-      onResize(startWidth + delta);
-    }
-    function onPointerUp() {
+    function end() {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       onDragEnd();
-      if (!moved.current) onToggle();
+    }
+    function onPointerMove(ev: PointerEvent) {
+      const delta = ev.clientX - startX;
+      if (Math.abs(delta) > DRAG_THRESHOLD) moved.current = true;
+      const raw = startWidth + delta;
+      if (raw < COLLAPSE_THRESHOLD) {
+        collapsed.current = true;
+        end();
+        onToggle();
+        return;
+      }
+      onResize(raw);
+    }
+    function onPointerUp() {
+      end();
+      if (!moved.current && !collapsed.current) onToggle();
     }
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
