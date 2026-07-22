@@ -6,6 +6,8 @@
 // connectors carry Oto's real installation state. Dates are preformatted
 // display strings so server and client can never disagree on locale.
 
+import { knowledgeDocs } from "./knowledge-docs";
+
 // Identity colors for nested items — the sidebar marks each doc/process with a
 // colored dot so the sub-sections are visually distinct (differentiation, not
 // decoration). Ordered so consecutive items in a section read as clearly
@@ -23,6 +25,29 @@ export const LABEL_DOT_COLORS = [
   "#ab4aba", // plum
 ] as const;
 
+// Document content is a typed block array rather than a markdown string: no
+// parser to maintain, total render control, and it forces the block schema the
+// back end will eventually serve. Inline references carry a slug, not a URL, so
+// a doc that gets renamed never leaves a dead link in prose.
+export type Span =
+  | string
+  | { ref: string } // inline reference to another doc, by slug
+  | { em: string }
+  | { strong: string }
+  | { code: string }
+  | { link: { href: string; label: string } };
+
+export type Block =
+  | { type: "h2" | "h3"; text: string }
+  | { type: "p"; spans: Span[] }
+  | { type: "ul" | "ol"; items: Span[][] }
+  | { type: "checklist"; items: { done: boolean; spans: Span[] }[] }
+  | { type: "table"; head: string[]; rows: Span[][][] }
+  | { type: "callout"; tone: "note" | "warn"; spans: Span[] }
+  | { type: "code"; lang: string; text: string }
+  | { type: "quote"; spans: Span[] }
+  | { type: "divider" };
+
 export type Doc = {
   slug: string;
   title: string;
@@ -31,7 +56,12 @@ export type Doc = {
   verifiedAt: string;
   sourceOfTruth?: string;
   excerpt: string;
-  links: string[]; // slugs of related docs
+  links: string[]; // slugs of related docs; a slug with no doc is an unresolved link
+  // Stored, never computed from the clock. Dates in this file are preformatted
+  // display strings precisely so server and client cannot disagree — deriving
+  // staleness from Date.now() would reintroduce the hazard it avoids.
+  freshness: "fresh" | "aging" | "stale";
+  body: Block[];
 };
 
 export type Skill = {
@@ -61,6 +91,10 @@ export type Process = {
   schedule: string | null; // null = manual / on demand
   skillIds: string[];
   connectorIds: string[];
+  // The knowledge this process reads before it runs. Together with
+  // connectorIds this is what makes the knowledge graph a picture of the
+  // company rather than of a wiki — see src/lib/knowledge-graph.ts.
+  docSlugs: string[];
   outputs: string[];
   // Most recent run first. Empty for processes that have never run (drafts).
   runs: ProcessRun[];
@@ -88,91 +122,9 @@ export type Connector = {
   personalSession: boolean;
 };
 
-export const docs: Doc[] = [
-  {
-    slug: "context-brief",
-    title: "Context brief",
-    category: "company",
-    owner: "Alessandro",
-    verifiedAt: "Jul 18, 2026",
-    excerpt: "Read this first: what the company sells, to whom, and where everything lives.",
-    links: ["overview", "glossary", "how-we-work"],
-  },
-  {
-    slug: "overview",
-    title: "Overview",
-    category: "company",
-    owner: "Alessandro",
-    verifiedAt: "Jul 14, 2026",
-    excerpt: "What we sell, core capabilities, ICP criteria, and the buyer personas.",
-    links: ["glossary"],
-  },
-  {
-    slug: "glossary",
-    title: "Glossary",
-    category: "company",
-    owner: "Julien",
-    verifiedAt: "Jul 10, 2026",
-    sourceOfTruth: "Warehouse · metric definitions win on conflict",
-    excerpt: "The definitions and IDs that make queries correct — metrics, events, and their traps.",
-    links: [],
-  },
-  {
-    slug: "people",
-    title: "People",
-    category: "company",
-    owner: "Alessandro",
-    verifiedAt: "Jul 8, 2026",
-    sourceOfTruth: "Notion · Teammate directory wins on conflict",
-    excerpt: "Who does what, and who owns which connector and process.",
-    links: ["how-we-work"],
-  },
-  {
-    slug: "how-we-work",
-    title: "How we work",
-    category: "company",
-    owner: "Julien",
-    verifiedAt: "Jun 30, 2026",
-    excerpt: "Rituals, decision rules, and how changes ship.",
-    links: ["context-brief"],
-  },
-  {
-    slug: "voice-guide",
-    title: "Voice guide",
-    category: "company",
-    owner: "Julien",
-    verifiedAt: "Jun 27, 2026",
-    excerpt: "Tone, phrasing rules, and the words we never use.",
-    links: [],
-  },
-  {
-    slug: "gtm-architecture",
-    title: "GTM architecture",
-    category: "wiki",
-    owner: "Alessandro",
-    verifiedAt: "Jun 20, 2026",
-    excerpt: "The full motion from signal to campaign, as one diagram.",
-    links: ["overview"],
-  },
-  {
-    slug: "feedback-pipeline-runbook",
-    title: "Feedback pipeline runbook and error handling",
-    category: "wiki",
-    owner: "Julien",
-    verifiedAt: "Jun 12, 2026",
-    excerpt: "Why the pipeline exists, how each step works, and what to do when it fails.",
-    links: ["glossary"],
-  },
-  {
-    slug: "decision-auto-merge",
-    title: "Decision: auto-merge with recap",
-    category: "decisions",
-    owner: "Alessandro",
-    verifiedAt: "Jul 20, 2026",
-    excerpt: "Changes merge without review; a recap posts to Slack after the fact.",
-    links: ["how-we-work"],
-  },
-];
+// The corpus itself lives in its own file purely for size — this stays the
+// single import surface for every consumer.
+export const docs: Doc[] = knowledgeDocs;
 
 export const skills: Skill[] = [
   { id: "pull-crm-records", name: "Pull CRM records", description: "Read companies, contacts, and deals from the CRM." },
@@ -206,6 +158,7 @@ export const processes: Process[] = [
       "sync-crm",
     ],
     connectorIds: ["hubspot", "lemlist", "slack"],
+    docSlugs: ["icp", "lead-scoring", "enrichment-waterfall", "outreach-playbook", "crm-hygiene", "glossary"],
     outputs: ["CRM list", "Campaign", "Slack recap"],
     runs: [
       { ranAt: "Jul 21, 2026 14:32", durationMinutes: 6, status: "success" },
@@ -229,6 +182,7 @@ export const processes: Process[] = [
     schedule: "Mon 09:00",
     skillIds: ["extract-call-feedback", "render-report", "post-slack-digest", "file-tickets"],
     connectorIds: ["notion", "slack"],
+    docSlugs: ["feedback-pipeline-runbook", "glossary", "voice-guide"],
     outputs: ["Report page", "Tickets", "Slack recap"],
     runs: [
       { ranAt: "Jul 20, 2026 09:00", durationMinutes: 12, status: "success" },
@@ -250,6 +204,7 @@ export const processes: Process[] = [
     schedule: "Mon + Thu 07:00",
     skillIds: ["collect-hiring-signals", "detect-tech-stack", "draft-outreach", "post-slack-digest"],
     connectorIds: ["hubspot", "lemlist", "slack"],
+    docSlugs: ["competitors", "icp", "outreach-playbook"],
     outputs: ["Campaign", "Slack recap"],
     runs: [
       { ranAt: "Jul 21, 2026 07:00", durationMinutes: 4, status: "success" },
@@ -268,6 +223,7 @@ export const processes: Process[] = [
     schedule: "Daily 08:00",
     skillIds: ["pull-crm-records", "post-slack-digest"],
     connectorIds: ["zohoanalytics", "hubspot", "slack"],
+    docSlugs: ["glossary", "data-model", "people"],
     outputs: ["Slack alert"],
     runs: [
       { ranAt: "Jul 21, 2026 08:00", durationMinutes: 2, status: "success" },
@@ -289,6 +245,7 @@ export const processes: Process[] = [
     schedule: "Daily 08:00",
     skillIds: ["post-slack-digest"],
     connectorIds: ["notion", "slack"],
+    docSlugs: ["connector-conventions", "agent-runbook", "security-posture"],
     outputs: ["Slack heartbeat"],
     runs: [
       { ranAt: "Jul 21, 2026 08:00", durationMinutes: 3, status: "success" },
@@ -311,6 +268,7 @@ export const processes: Process[] = [
     schedule: null,
     skillIds: ["draft-outreach", "post-slack-digest"],
     connectorIds: ["slack"],
+    docSlugs: ["voice-guide", "overview"],
     outputs: ["Slack drafts"],
     runs: [],
     versions: [{ version: 1, createdAt: "Jul 19, 2026" }],
@@ -325,6 +283,7 @@ export const processes: Process[] = [
     schedule: null,
     skillIds: ["pull-crm-records", "sync-crm"],
     connectorIds: ["hubspot"],
+    docSlugs: ["data-model", "reporting-stack"],
     outputs: ["Ledger updates"],
     runs: [{ ranAt: "Mar 2, 2026 10:00", durationMinutes: 5, status: "success" }],
     versions: [
@@ -1207,6 +1166,22 @@ export const getConnector = (id: string) => connectors.find((c) => c.id === id);
 
 export const connectorUsage = (connectorId: string): Process[] =>
   processes.filter((p) => p.status !== "deprecated" && p.connectorIds.includes(connectorId));
+
+// Which docs point at this one. The Doc shape only stores outgoing links, so
+// backlinks are always a scan — cheap at this size, and it keeps a doc's own
+// record from having to be kept in sync with its referrers.
+export const backlinksFor = (slug: string): Doc[] =>
+  docs.filter((d) => d.slug !== slug && d.links.includes(slug));
+
+// Outgoing links, with slugs that have no doc preserved rather than dropped —
+// those are the unresolved links the graph draws as phantom nodes and the
+// links list marks "Not created yet".
+export const outgoingFor = (slug: string): { slug: string; doc: Doc | undefined }[] =>
+  (getDoc(slug)?.links ?? []).map((target) => ({ slug: target, doc: getDoc(target) }));
+
+// Processes that read this doc before they run.
+export const processesReading = (slug: string): Process[] =>
+  processes.filter((p) => p.status !== "deprecated" && p.docSlugs.includes(slug));
 
 // The only two people in this mock workspace — reused wherever a connector
 // needs an access-grant list, not a magic array inlined at the call site.

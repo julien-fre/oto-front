@@ -109,6 +109,15 @@
   --text-body-medium--letter-spacing: -0.002em;
   --text-body-medium--font-weight: 500;
 
+  /* Running document body only. Same 13px as text-body, looser leading: the
+     18px line-height is tuned for dense UI rows, and a page of prose set that
+     tight is genuinely hard to read. The one new type token — sizes and
+     weights are unchanged. */
+  --text-prose: 13px;
+  --text-prose--line-height: 21px;
+  --text-prose--letter-spacing: -0.002em;
+  --text-prose--font-weight: 400;
+
   --text-caption: 12px;
   --text-caption--line-height: 16px;
   --text-caption--letter-spacing: -0.002em;
