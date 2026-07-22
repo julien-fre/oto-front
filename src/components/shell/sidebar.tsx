@@ -22,7 +22,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" | "peek" })
   const { toggleNav, setPaletteOpen } = useSidebar();
 
   return (
-    <div className={cn("flex h-full flex-col", variant === "desktop" ? "w-full" : "w-60")}>
+    <div className={cn("flex h-full flex-col", variant === "drawer" ? "w-60" : "w-full")}>
       <div className="flex h-12 shrink-0 items-center gap-1 px-3">
         <button
           type="button"
@@ -257,7 +257,7 @@ export function Sidebar() {
           inert={!peeking}
           style={{ width: PEEK_WIDTH }}
           className={cn(
-            "fixed inset-y-3 left-3 z-40 hidden rounded-lg bg-gray-2 shadow-high transition-transform duration-150 ease-out shell:block motion-reduce:transition-none",
+            "fixed inset-y-3 left-3 z-40 hidden overflow-hidden rounded-lg bg-gray-2 shadow-high transition-transform duration-150 ease-out shell:block motion-reduce:transition-none",
             peeking ? "translate-x-0" : "-translate-x-[calc(100%+0.75rem)]",
           )}
         >
