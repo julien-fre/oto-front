@@ -21,3 +21,11 @@ export const statusPillClassName: Record<ConnectorStatusKey, string> = {
   paused: "bg-amber-9/15 text-amber-11",
   not_selected: "bg-gray-4 text-muted",
 };
+
+// Small state dot for button-style status triggers (vs. the colored pill
+// above, used where the status is plain display, e.g. the connector card).
+export const statusDotClassName: Record<ConnectorStatusKey, string> = {
+  active: "bg-green-9",
+  paused: "bg-amber-9",
+  not_selected: "bg-gray-6",
+};

@@ -5,9 +5,13 @@ import Link from "next/link";
 import { ConnectorCredentialModal } from "@/components/connector-credential-modal";
 import { ConnectorLogo } from "@/components/connector-logo";
 import { Toggle } from "@/components/toggle";
-import { XIcon } from "@/components/icons";
+import { ChevronRightIcon, XIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
-import { statusLabels, statusPillClassName, type ConnectorStatusKey } from "@/lib/connector-status";
+import {
+  statusDotClassName,
+  statusLabels,
+  type ConnectorStatusKey,
+} from "@/lib/connector-status";
 import { connectorUsage, team, teams, type Connector } from "@/lib/mock-data";
 
 const linkClassName =
@@ -138,12 +142,13 @@ export function ConnectorDetailPanel({
               aria-haspopup="menu"
               aria-expanded={statusMenuOpen}
               className={cn(
-                "rounded-full px-2 py-0.5 text-caption",
-                statusPillClassName[status],
+                "flex h-7 items-center gap-1.5 rounded-full border border-border px-3 text-button text-gray-12 hover:bg-gray-2",
                 focusRing,
               )}
             >
+              <span className={cn("size-1.5 shrink-0 rounded-full", statusDotClassName[status])} />
               {statusLabels[status]}
+              <ChevronRightIcon className="rotate-90 text-icon" />
             </button>
             {statusMenuOpen && (
               <>
