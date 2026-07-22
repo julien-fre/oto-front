@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Connectors" };
 
 export default function ConnectorsPage() {
   return (
-    <div className="px-12 pt-2 pb-6">
+    <div className="max-w-5xl px-12 pt-2 pb-6">
       <PageHeader title="Connectors" />
       <ConnectorsBrowser connectors={connectors} />
     </div>
