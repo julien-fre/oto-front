@@ -249,19 +249,19 @@ Hierarchy on a page comes from weight, color, and spacing — not size. A sectio
 Defined in [`app-shell.tsx`](../src/components/shell/app-shell.tsx). Understand this before adding a route.
 
 ```
-┌──────────────────────────────────────────────┐  bg-gray-2 (the app background)
-│ TopBar — h-10, full width, breadcrumb        │
-├───────────┬──────────────────────────────────┤
-│ Sidebar   │ ╭──────────────────────────────╮ │  the page: white, rounded-xl,
-│ (no       │ │ <main> — your page renders   │ │  1px border, inset 8px
-│ surface   │ │ inside here                  │ │
-│ of its    │ ╰──────────────────────────────╯ │
-│ own)      │                                  │
+┌───────────┬──────────────────────────────────┐  bg-gray-2 (the app background)
+│ Sidebar   │ ╭──────────────────────────────╮ │
+│ (no       │ │ TopBar — h-10, breadcrumb    │ │  the page: white, rounded-xl,
+│ surface   │ ├──────────────────────────────┤ │  1px border, inset 8px
+│ of its    │ │ <main> — your page renders   │ │
+│ own)      │ │ inside here                  │ │
+│           │ ╰──────────────────────────────╯ │
 └───────────┴──────────────────────────────────┘
 ```
 
 - The app background is `{colors.gray-2}` — the same surface the sidebar sits on. The page is a white panel inset 8px with `{rounded.xl}` corners and a 1px border, layered over it. The sidebar carries no surface or border of its own, so it reads as a frame wrapping around the page rather than a column bolted beside it.
 - Below the `shell` breakpoint (52rem) the page goes full-bleed and the sidebar becomes an overlay drawer — there is no column next to it to wrap anything.
+- **The top bar belongs to the page panel, not the window.** Docked, it starts beside the sidebar; collapsed, the panel spans the full width so the bar starts at the left edge and grows a reopen toggle. It never sits above the sidebar — the sidebar has its own header at that height.
 - **The top bar owns the page title.** The trailing breadcrumb crumb is the page's `<h1>`, rendered at `text-body-medium`. Pages must not render their own heading — a page whose first element is an `<h1>` will duplicate the breadcrumb. (There used to be a `PageHeader` component; it's gone.)
 - Everything behind an open modal, drawer, or palette receives `inert`, including the top bar. Follow that when you add a floating surface.
 

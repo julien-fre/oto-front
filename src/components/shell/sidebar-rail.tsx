@@ -17,12 +17,16 @@ const COLLAPSE_THRESHOLD = MIN_SIDEBAR_WIDTH - 60;
 // collapsed happens via the left-edge hover peek instead (see sidebar.tsx).
 export function SidebarRail({
   width,
+  active,
   onResize,
   onToggle,
   onDragStart,
   onDragEnd,
 }: {
   width: number;
+  // True while a resize drag is in flight. The pointer leaves the handle as
+  // soon as the drag starts, so hover alone would blink the bar off mid-drag.
+  active?: boolean;
   onResize: (width: number) => void;
   onToggle: () => void;
   onDragStart: () => void;
@@ -89,11 +93,25 @@ export function SidebarRail({
       onPointerDown={handlePointerDown}
       onKeyDown={handleKeyDown}
       className={cn(
-        "group absolute inset-y-0 right-0 z-10 w-2.5 translate-x-1/2 cursor-col-resize",
+        // Tracks the page panel's edge, not the sidebar's own: the panel is
+        // inset by 8px (layout.page-inset), so the handle is pushed out by the
+        // same amount and stops at the panel's bottom. The line you grab is
+        // then exactly the edge you appear to be dragging.
+        "group absolute inset-y-2 -right-2 z-10 w-2.5 translate-x-1/2 cursor-col-resize",
         focusRing,
       )}
     >
-      <div className="mx-auto h-full w-px bg-transparent transition-colors group-hover:bg-gray-7" />
+      {/* At rest the page panel's own border is the divider; on hover — and
+          for the whole drag — this thickens and darkens over it so the edge
+          reads as grabbable. Inset by the panel's corner radius (rounded-xl,
+          12px) so the bar covers only the straight run of that edge and never
+          cuts across the rounded corners. The hit area stays full height. */}
+      <div
+        className={cn(
+          "absolute inset-y-3 left-1/2 w-0.5 -translate-x-1/2 transition-colors duration-100 motion-reduce:transition-none",
+          active ? "bg-gray-9" : "bg-transparent group-hover:bg-gray-9",
+        )}
+      />
     </div>
   );
 }
