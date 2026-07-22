@@ -6,27 +6,28 @@ description: Oto's design system, Light theme. Adapted from Folk's design system
 colors:
   # Semantic
   background: "#ffffff"
-  border: "#d9d9d9"
-  muted: "#626262"
-  icon: "#626262"
-  placeholder: "#707070" # darkened from gray-9 for WCAG AA text contrast (4.7:1 on gray-2)
+  border: "#d9d9e0"
+  muted: "#60646c"
+  icon: "#60646c"
+  placeholder: "#6d7078" # darkened from gray-9 for WCAG AA text contrast (4.7:1 on gray-2)
   focus-ring: "#0090ff" # blue-9; blue-7 fails the 3:1 non-text contrast minimum for focus indicators
-  interactive-hovered: "#0000000e"
-  interactive-checked: "#00000016"
+  interactive-hovered: "#1c20240f"
+  interactive-checked: "#1c202417"
 
-  # Gray scale
-  gray-1: "#fdfdfd"
-  gray-2: "#f9f9f9"
-  gray-3: "#f1f1f1"
-  gray-4: "#e9e9e9"
-  gray-5: "#e1e1e1"
-  gray-6: "#d9d9d9"
-  gray-7: "#cecece"
-  gray-8: "#bbb"
-  gray-9: "#8c8c8c"
-  gray-10: "#828282"
-  gray-11: "#626262"
-  gray-12: "#202020"
+  # Gray scale — cool-tinted (Radix Slate): a few degrees toward blue so
+  # surfaces read crisp rather than flat
+  gray-1: "#fcfcfd"
+  gray-2: "#f9f9fb"
+  gray-3: "#f0f0f3"
+  gray-4: "#e8e8ec"
+  gray-5: "#e0e1e6"
+  gray-6: "#d9d9e0"
+  gray-7: "#cdced6"
+  gray-8: "#b9bbc6"
+  gray-9: "#8b8d98"
+  gray-10: "#80838d"
+  gray-11: "#60646c"
+  gray-12: "#1c2024"
 
   # Chromatic — functional use only
   red-9: "#e5484d"
@@ -46,7 +47,7 @@ typography:
   title:
     fontFamily: "Inter var, ui-sans-serif" # placeholder — Folk uses Uxum Grotesque, not licensed for Oto yet
     fontSize: 20px
-    fontWeight: 400
+    fontWeight: 500
     lineHeight: 30px
     letterSpacing: -0.019em
   text:
@@ -131,7 +132,7 @@ The app background is white (`{colors.background}` #ffffff). Each gray scale ste
 - `5`: structural borders and separators
 - `6`: interactive borders, inputs, textareas, checkboxes, neutral CTAs
 - `7`: hover of `6`
-- `9`: placeholders and empty interactive text — for text, use the `placeholder` token (#707070), darkened off this step to clear WCAG AA
+- `9`: placeholders and empty interactive text — for text, use the `placeholder` token (#6d7078), darkened off this step to clear WCAG AA
 - `11`: muted text, captions, secondary labels
 - `12`: primary text, body, titles, badges
 
@@ -156,6 +157,17 @@ Inter var sets everything: titles, labels, body, buttons, captions — until Oto
 Spacing follows a 4px scale: 4, 8, 12, 16, 24, 32, 40px. Keep a three-step rhythm: 8px inside a component, 16px between components in a group, 32–40px between sections.
 
 No decorative whitespace. Spacing is structural, it separates things that need separation, nothing more. When in doubt, go tighter.
+
+## Motion
+
+Motion is feedback, never decoration. It should be felt, not watched.
+
+- Color, background, and opacity changes: 100–150ms, default easing (`transition-colors duration-100`).
+- Structural changes (sidebar width, drawer slide): 200ms ease-out.
+- Entering floating surfaces: `animate-panel-in` (150ms fade, settling down from 4px above at 98% scale); simple reveals: `animate-fade-in`.
+- Pressed feedback on icon-only buttons: scale to 0.95 while active. Note: Tailwind v4 compiles scale/rotate to their own CSS properties — transition `scale`/`rotate`, not `transform`.
+- Never bounce, never spring, nothing longer than 300ms. Every transition and
+  animation carries `motion-reduce:transition-none` / `motion-reduce:animate-none`.
 
 ## Elevation & Depth
 

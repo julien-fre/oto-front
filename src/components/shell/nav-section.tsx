@@ -36,7 +36,7 @@ export function NavSection({
     <div>
       <div
         className={cn(
-          "group/row flex h-7 items-center gap-2 rounded-full px-2",
+          "group/row flex h-7 items-center gap-2 rounded-full px-2 transition-colors duration-100 motion-reduce:transition-none",
           active ? "bg-interactive-checked" : "hover:bg-interactive-hovered",
         )}
       >
@@ -47,16 +47,16 @@ export function NavSection({
           aria-controls={groupId}
           aria-label={isExpanded ? `Collapse ${label.toLowerCase()}` : `Expand ${label.toLowerCase()}`}
           className={cn(
-            "relative flex size-5 shrink-0 items-center justify-center rounded-full text-icon",
+            "relative flex size-5 shrink-0 items-center justify-center rounded-full text-icon transition-[scale] duration-100 active:scale-95 motion-reduce:transition-none",
             focusRing,
           )}
         >
-          <span className="group-focus-within/row:opacity-0 group-hover/row:opacity-0">
+          <span className="transition-opacity duration-100 group-focus-within/row:opacity-0 group-hover/row:opacity-0 motion-reduce:transition-none">
             {icon}
           </span>
           <ChevronRightIcon
             className={cn(
-              "absolute inset-0 m-auto opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100",
+              "absolute inset-0 m-auto opacity-0 transition-[opacity,rotate] duration-150 group-focus-within/row:opacity-100 group-hover/row:opacity-100 motion-reduce:transition-none",
               isExpanded && "rotate-90",
             )}
           />
@@ -78,14 +78,18 @@ export function NavSection({
           aria-label={addLabel}
           onClick={() => console.debug(addLabel)}
           className={cn(
-            "flex size-5 shrink-0 items-center justify-center rounded-full text-icon opacity-0 hover:bg-interactive-hovered focus-visible:opacity-100 group-hover/row:opacity-100",
+            "flex size-5 shrink-0 items-center justify-center rounded-full text-icon opacity-0 transition-[opacity,background-color,scale] duration-100 hover:bg-interactive-hovered focus-visible:opacity-100 active:scale-95 group-hover/row:opacity-100 motion-reduce:transition-none",
             focusRing,
           )}
         >
           <PlusIcon />
         </button>
       </div>
-      <div id={groupId} hidden={!isExpanded}>
+      <div
+        id={groupId}
+        hidden={!isExpanded}
+        className="animate-fade-in motion-reduce:animate-none"
+      >
         {children}
       </div>
     </div>
