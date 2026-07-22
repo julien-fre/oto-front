@@ -163,6 +163,18 @@ Two rules that override taste: never invent a token value (size, color, radius, 
 
 One codebase note before you write React: this is Next.js 16, and it differs from what you (and your AI tools) remember. `PageProps<"/route">` / `LayoutProps<"/">` are global types, `params` is a promise, `cookies()` is async. Read `node_modules/next/dist/docs/` for the relevant guide before writing route code — see [`AGENTS.md`](../AGENTS.md).
 
+Where things live:
+
+```
+src/app/<section>/page.tsx     routes; server components unless they hold state
+src/app/globals.css            every token, wired into Tailwind v4 via @theme
+src/components/shell/          the frame: top bar, sidebar, nav rows, palette, provider
+src/components/<section>-*.tsx section-specific components
+src/components/icons.tsx       every icon in the app
+src/lib/cn.ts                  cn() + focusRing
+src/lib/mock-data.ts           fixtures and accessors until the back end lands
+```
+
 ## Implementation
 
 The tokens above are wired into Tailwind v4 via `@theme` in [`src/app/globals.css`](../src/app/globals.css):
@@ -261,6 +273,31 @@ Page bodies are:
 ```
 
 Sidebar state (open/collapsed, expanded groups, width) is server-rendered from cookies in [`layout.tsx`](../src/app/layout.tsx) so there's no hydration flash. That read makes every route dynamic — intentional, don't move it client-side.
+
+## Navigation
+
+The sidebar is where a new section becomes visible to the user, so its rules are part of the design system rather than an implementation detail. [`sidebar.tsx`](../src/components/shell/sidebar.tsx) holds all three of its modes; `SidebarContent` is rendered identically in each.
+
+**Regions**, top to bottom: a `h-12` header (workspace switcher + collapse button), the `h-7` search row that opens the command palette, the scrolling `<nav>` (sections separated by `gap-4`), and a footer separated by `border-t border-border` (settings + account). New destinations go in the `<nav>`; nothing else earns a region.
+
+**Three rows, three meanings** — pick by what the thing *is*, not by how deep it sits:
+
+| Component | Use for | Behavior |
+| --- | --- | --- |
+| [`NavLink`](../src/components/shell/nav-link.tsx) | a destination | navigates; `aria-current="page"` when active |
+| [`NavSection`](../src/components/shell/nav-section.tsx) | a destination that has children | label navigates, chevron expands, `+` adds |
+| [`NavFolder`](../src/components/shell/nav-folder.tsx) | grouping that isn't a page | the whole row toggles; no href, ever |
+
+Shared row grammar: `h-7`, `rounded-full`, `gap-2`, active is `bg-interactive-checked` + `text-body-medium`, idle hover is `bg-interactive-hovered`. Nested rows sit inside `treeGuide` (`ml-3 border-l border-gray-5 pl-1`, exported from `nav-folder.tsx`) — use it for every level so the tree lines up, rather than padding rows by hand. Nested `NavLink`s take `indent`, which swaps their label to `text-muted` until hover.
+
+Two behaviors worth copying when you build any dense row:
+
+- **The leading glyph doubles as the disclosure control.** In `NavSection` the section icon cross-fades to a chevron on `group-hover/row` *and* `group-focus-within/row`, so the row shows identity at rest and affordance on approach — one 20px target, not two.
+- **Row actions appear on hover.** The `+` button is `opacity-0`, revealed by `group-hover/row:opacity-100` and `focus-visible:opacity-100`. Always both: keyboard users can't hover.
+
+**Modes.** Docked (`shell:` and up, width persisted per user, resizable 200–360px by the [`SidebarRail`](../src/components/shell/sidebar-rail.tsx) — a real `role="separator"` splitter with arrow-key resize, not a styled div). Collapsed leaves the docked column at width 0 and floats a 224px peek panel on left-edge hover, inset and shadowed so it reads as a card over the page. Below `shell` it becomes an `aria-modal` drawer behind a scrim. Section code shouldn't need to know which mode is active — read state from `useSidebar()` rather than measuring.
+
+A section that should reveal itself when the user lands on one of its routes adds an `expandGroup` call in the pathname effect in `sidebar.tsx`; a manual collapse then sticks until the next navigation.
 
 ## Layout & Spacing
 
@@ -483,7 +520,11 @@ Use [`<Toggle>`](../src/components/toggle.tsx) — `role="switch"`, `bg-green-9`
 
 [`src/components/icons.tsx`](../src/components/icons.tsx) — Lucide paths (ISC), rendered at 15px with 1.75 stroke via `IconBase`, `aria-hidden` by default, colored by `currentColor`. Add new ones there by pasting the Lucide path into an `IconBase`; never import an icon package, and never mix stroke widths. Icons sitting beside text take `className="shrink-0 text-icon"`.
 
-`DottedIcon` composes a neutral glyph with an identity color dot for tree rows.
+15px is the default because it matches the `h-7` row. The one override in the app is the breadcrumb separator at `size={13}`, sized down to sit between 13px labels — treat that as the exception, not a second size to choose from.
+
+`DottedIcon` composes a neutral glyph with an identity color dot for tree rows: the glyph inherits `text-icon`, the dot carries the `label-dots` identity color. That split is the rule — a leading icon never takes an identity color on its stroke *and* a dot.
+
+[`OtoMark`](../src/components/oto-mark.tsx) is the brand mark — an open "O", monochrome via `currentColor`, 16px. It appears once, in the sidebar header. Don't tint it, don't scale it into a page as a decorative element.
 
 ### Empty states
 
@@ -519,7 +560,7 @@ Say the section is `Reports`. In order:
 1. **Route.** `src/app/reports/page.tsx`, plus `src/app/reports/[slug]/page.tsx` if items have detail pages. Export `metadata` — the root layout's `title.template` appends `· Oto`, so `export const metadata = { title: "Reports" }` is enough. (Same-segment exception: the root `page.tsx` needs `title: { absolute: … }`.) Detail pages use `generateMetadata` with the awaited `params`.
 2. **Body.** `<div className="px-12 py-6">`, `max-w-6xl` too if it's a card grid. No `<h1>`.
 3. **Breadcrumb.** Add a branch to `crumbsFor()` in [`top-bar.tsx`](../src/components/shell/top-bar.tsx). Ancestors get an `href`, the trailing crumb doesn't; a grouping that isn't a page (a folder) gets a crumb with no href.
-4. **Navigation.** Add to `SidebarContent` in [`sidebar.tsx`](../src/components/shell/sidebar.tsx): `<NavLink>` for a flat destination, `<NavSection>` for one with children (it needs a stable `id` — that id is what the expanded-groups cookie persists), `<NavFolder>` for pure disclosure inside a section. If landing on the route should reveal its group, add it to the `expandGroup` effect in the same file.
+4. **Navigation.** Add to `SidebarContent` in [`sidebar.tsx`](../src/components/shell/sidebar.tsx) — see [Navigation](#navigation) for which row component to use. A `<NavSection>` needs a stable `id`: that id is what the expanded-groups cookie persists, so renaming it silently resets everyone's sidebar.
 5. **Data.** Until the back end lands, shapes and fixtures go in [`src/lib/mock-data.ts`](../src/lib/mock-data.ts) with the accessors beside them. Preformat dates as display strings so server and client can't disagree on locale.
 6. **Components.** Section-specific components go in `src/components/<section>-*.tsx`; anything the shell uses lives in `src/components/shell/`. Client components only where there's state — pages stay server components.
 7. **Verify.** `npm run lint` and `npx tsc --noEmit`, then check the section at both sides of the 52rem `shell` breakpoint, with the sidebar collapsed and open, and tab through it once.
@@ -536,4 +577,5 @@ Say the section is `Reports`. In order:
 - Don't add shadows to cards or static surfaces, only to floating surfaces (dropdowns, modals, panels).
 - Don't invent radii, heights, durations, or z values — take them from the scales above.
 - Don't render a page-level `<h1>`; the top bar breadcrumb is the page title.
+- Don't hide an affordance behind hover alone — reveal it on `group-focus-within` too.
 - Don't add decorative whitespace. Oto is dense.
