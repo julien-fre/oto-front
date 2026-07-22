@@ -288,7 +288,10 @@ export function Sidebar() {
         <div
           onMouseEnter={handleEdgeEnter}
           onMouseLeave={handleEdgeLeave}
-          inert={!peeking}
+          // Also inert behind the palette: it is the one floating surface the
+          // palette does not sit inside, so without this focus escapes the
+          // modal into it.
+          inert={!peeking || paletteOpen}
           style={{ width: PEEK_WIDTH }}
           className={cn(
             // Hangs below the page panel's breadcrumb bar so it stays

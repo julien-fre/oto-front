@@ -46,7 +46,15 @@ export function SidebarRail({
     function end() {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerCancel);
       onDragEnd();
+    }
+    // A cancelled gesture (touch interrupted, browser taking over the
+    // pointer) fires neither pointermove nor pointerup, which would orphan
+    // the listeners and leave the drag latched on: the bar stuck lit and the
+    // sidebar still resizing with nothing held down.
+    function onPointerCancel() {
+      end();
     }
     function onPointerMove(ev: PointerEvent) {
       const delta = ev.clientX - startX;
@@ -66,6 +74,7 @@ export function SidebarRail({
     }
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerCancel);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {

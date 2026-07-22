@@ -107,6 +107,20 @@ export function SidebarProvider({
     }
   }, [paletteOpen]);
 
+  // The drawer only exists below the shell breakpoint, and both it and its
+  // scrim are display:none above it. If the viewport grows past the
+  // breakpoint while the drawer is open — rotating a tablet, widening a
+  // window — mobileOpen would stay true and keep the page inert with nothing
+  // on screen to dismiss, which reads as a frozen app.
+  useEffect(() => {
+    const desktop = window.matchMedia(DESKTOP_QUERY);
+    function onChange(event: MediaQueryListEvent) {
+      if (event.matches) setMobileOpen(false);
+    }
+    desktop.addEventListener("change", onChange);
+    return () => desktop.removeEventListener("change", onChange);
+  }, [setMobileOpen]);
+
   useEffect(() => {
     writeCookie(SIDEBAR_COOKIE, open ? "open" : "closed");
   }, [open]);
