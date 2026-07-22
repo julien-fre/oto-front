@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/page-header";
 import { getDoc } from "@/lib/mock-data";
 
 export async function generateMetadata({ params }: PageProps<"/knowledge/[slug]">) {
@@ -15,12 +14,11 @@ export default async function DocPage({ params }: PageProps<"/knowledge/[slug]">
   const related = doc.links.map(getDoc).filter((d) => d !== undefined);
 
   return (
-    <div className="px-12 pt-2 pb-6">
-      <PageHeader title={doc.title} />
+    <div className="px-12 py-6">
       {doc.sourceOfTruth && (
-        <p className="mt-4 text-caption text-muted">Source of truth: {doc.sourceOfTruth}</p>
+        <p className="text-caption text-muted">Source of truth: {doc.sourceOfTruth}</p>
       )}
-      <p className="mt-8 max-w-prose text-body text-gray-11">{doc.excerpt}</p>
+      <p className="mt-6 max-w-prose text-body text-gray-11">{doc.excerpt}</p>
       {related.length > 0 && (
         <section className="mt-8">
           <h2 className="text-body-medium text-gray-12">Related</h2>
@@ -29,7 +27,7 @@ export default async function DocPage({ params }: PageProps<"/knowledge/[slug]">
               <li key={r.slug}>
                 <Link
                   href={`/knowledge/${r.slug}`}
-                  className="text-body text-gray-11 underline decoration-gray-7 underline-offset-2 hover:text-gray-12"
+                  className="text-body text-gray-11 underline decoration-gray-7 underline-offset-2 transition-colors duration-100 hover:text-gray-12 motion-reduce:transition-none"
                 >
                   {r.title}
                 </Link>

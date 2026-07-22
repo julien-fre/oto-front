@@ -13,13 +13,13 @@ export function CommandPalette() {
       <div
         aria-hidden="true"
         onClick={() => setPaletteOpen(false)}
-        className="absolute inset-0 bg-black/20"
+        className="absolute inset-0 animate-fade-in bg-black/20 motion-reduce:animate-none"
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Search"
-        className="relative mx-auto mt-[15vh] w-full max-w-xl rounded-none bg-background shadow-dropdown"
+        className="relative mx-auto mt-[15vh] w-full max-w-xl animate-panel-in overflow-hidden rounded-xl bg-background shadow-dropdown motion-reduce:animate-none"
       >
         <div className="flex h-12 items-center gap-2 border-b border-border px-4">
           <SearchIcon className="shrink-0 text-icon" />

@@ -10,9 +10,11 @@ const KEYBOARD_STEP = 16;
 // clamping at the minimum width — matches Linear's "drag it closed" feel.
 const COLLAPSE_THRESHOLD = MIN_SIDEBAR_WIDTH - 60;
 
-// The edge handle a Linear-style sidebar exposes: drag it to resize, click it
-// (no movement) to collapse/expand, arrow keys to resize when focused. ARIA
-// "window splitter" pattern (role="separator" + aria-value*), not a plain div.
+// The edge handle on the open sidebar: drag to resize, click it (no
+// movement) to collapse, arrow keys to resize and Enter/Space to collapse
+// when focused — a proper ARIA "window splitter" (role="separator" +
+// aria-value*), not a plain div. Only rendered while open; reopening from
+// collapsed happens via the left-edge hover peek instead (see sidebar.tsx).
 export function SidebarRail({
   width,
   onResize,

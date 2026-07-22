@@ -34,8 +34,10 @@ export function NavLink({
       onClick={() => setMobileOpen(false)}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex h-7 items-center gap-2 rounded-full pr-2",
-        indent ? "pl-9" : "px-2",
+        "group flex h-7 items-center gap-2 rounded-full pr-2 transition-colors duration-100 motion-reduce:transition-none",
+        // Nested rows sit inside a tree-guide container that already indents
+        // them, so they only need a hair of padding of their own.
+        indent ? "pl-1" : "px-2",
         active ? "bg-interactive-checked" : "hover:bg-interactive-hovered",
         focusRing,
       )}
@@ -43,7 +45,7 @@ export function NavLink({
       {icon && <span className="shrink-0 text-icon">{icon}</span>}
       <span
         className={cn(
-          "min-w-0 flex-1 truncate",
+          "min-w-0 flex-1 truncate transition-colors duration-100 motion-reduce:transition-none",
           active
             ? "text-body-medium text-gray-12"
             : indent

@@ -3,28 +3,30 @@
 /* Design tokens — see docs/design-system.md */
 :root {
   --background: #ffffff;
-  --border: #d9d9d9;
-  --muted: #626262;
-  --icon: #626262;
+  --border: #d9d9e0;
+  --muted: #60646c;
+  --icon: #60646c;
   /* placeholder and focus-ring are darkened off their scale steps (gray-9,
      blue-7) to clear WCAG AA contrast on white and gray-2 surfaces */
-  --placeholder: #707070;
+  --placeholder: #6d7078;
   --focus-ring: #0090ff;
-  --interactive-hovered: #0000000e;
-  --interactive-checked: #00000016;
+  --interactive-hovered: #1c20240f;
+  --interactive-checked: #1c202417;
 
-  --gray-1: #fdfdfd;
-  --gray-2: #f9f9f9;
-  --gray-3: #f1f1f1;
-  --gray-4: #e9e9e9;
-  --gray-5: #e1e1e1;
-  --gray-6: #d9d9d9;
-  --gray-7: #cecece;
-  --gray-8: #bbbbbb;
-  --gray-9: #8c8c8c;
-  --gray-10: #828282;
-  --gray-11: #626262;
-  --gray-12: #202020;
+  /* Cool-tinted gray scale (Radix Slate) — a few degrees toward blue so
+     surfaces read crisp rather than flat; imperceptible alone, felt in sum */
+  --gray-1: #fcfcfd;
+  --gray-2: #f9f9fb;
+  --gray-3: #f0f0f3;
+  --gray-4: #e8e8ec;
+  --gray-5: #e0e1e6;
+  --gray-6: #d9d9e0;
+  --gray-7: #cdced6;
+  --gray-8: #b9bbc6;
+  --gray-9: #8b8d98;
+  --gray-10: #80838d;
+  --gray-11: #60646c;
+  --gray-12: #1c2024;
 
   --red-9: #e5484d;
   --red-11: #ce2c31;
@@ -47,6 +49,13 @@
   /* App-shell breakpoint — sidebar column above, overlay drawer below.
      Mirrored in MOBILE_QUERY in src/components/shell/sidebar-provider.tsx */
   --breakpoint-shell: 52rem;
+
+  /* Radius — surfaces are rounded, not sharp. Pills stay for nav rows,
+     chips, and icon buttons; every other surface takes a step from here. */
+  --radius-sm: 4px; /* small controls, tags */
+  --radius-md: 6px; /* inputs, buttons */
+  --radius-lg: 8px; /* cards, menus, popovers */
+  --radius-xl: 12px; /* page surface, modals, the command palette */
 
   --color-background: var(--background);
   --color-border: var(--border);
@@ -88,7 +97,7 @@
   --text-title: 20px;
   --text-title--line-height: 30px;
   --text-title--letter-spacing: -0.019em;
-  --text-title--font-weight: 400;
+  --text-title--font-weight: 500;
 
   --text-body: 13px;
   --text-body--line-height: 18px;
@@ -115,6 +124,30 @@
   --shadow-high: 0px 0px 1px 0px rgba(24, 26, 27, 0.04),
     0px 3px 6px 0px rgba(24, 26, 27, 0.08), 0px 9px 88px 0px rgba(24, 26, 27, 0.28),
     0 0 0 1px rgba(141, 141, 141, 0.24);
+
+  /* Motion — 100–150ms ease-out for color/opacity, 200ms for structure.
+     Pair every animate-* usage with motion-reduce:animate-none. */
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-panel-in: panel-in 150ms ease-out;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 }
 
 body {
