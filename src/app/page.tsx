@@ -31,8 +31,8 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="px-8 py-6">
-      <PageHeader title="Home" caption="The workspace at a glance." />
+    <div className="px-12 pt-2 pb-6">
+      <PageHeader title="Home" />
       <div className="mt-8 divide-y divide-gray-5 border-y border-gray-5">
         {sections.map((section) => (
           <Link

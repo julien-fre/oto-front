@@ -9,11 +9,8 @@ const statusLabel = { active: "Active", draft: "Draft", deprecated: "Deprecated"
 
 export default function ProcessesPage() {
   return (
-    <div className="px-8 py-6">
-      <PageHeader
-        title="Processes"
-        caption="Automations and internal products, each composed of reusable skills."
-      />
+    <div className="px-12 pt-2 pb-6">
+      <PageHeader title="Processes" />
       <div className="mt-8 divide-y divide-gray-5 border-y border-gray-5">
         {processes.map((process) => (
           <Link

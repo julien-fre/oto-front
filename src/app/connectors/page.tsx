@@ -22,11 +22,8 @@ function statusDisplay(connector: Connector): { label: string; className: string
 
 export default function ConnectorsPage() {
   return (
-    <div className="px-8 py-6">
-      <PageHeader
-        title="Connectors"
-        caption="The tools this workspace is connected to."
-      />
+    <div className="px-12 pt-2 pb-6">
+      <PageHeader title="Connectors" />
       <div className="mt-8 divide-y divide-gray-5 border-y border-gray-5">
         {connectors.map((connector) => {
           const status = statusDisplay(connector);
