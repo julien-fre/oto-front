@@ -17,12 +17,16 @@ const COLLAPSE_THRESHOLD = MIN_SIDEBAR_WIDTH - 60;
 // collapsed happens via the left-edge hover peek instead (see sidebar.tsx).
 export function SidebarRail({
   width,
+  active,
   onResize,
   onToggle,
   onDragStart,
   onDragEnd,
 }: {
   width: number;
+  // True while a resize drag is in flight. The pointer leaves the handle as
+  // soon as the drag starts, so hover alone would blink the bar off mid-drag.
+  active?: boolean;
   onResize: (width: number) => void;
   onToggle: () => void;
   onDragStart: () => void;
@@ -97,7 +101,15 @@ export function SidebarRail({
         focusRing,
       )}
     >
-      <div className="mx-auto h-full w-px bg-transparent transition-colors group-hover:bg-gray-7" />
+      {/* At rest the page panel's own border is the divider; on hover — and
+          for the whole drag — this thickens and darkens over it so the edge
+          reads as grabbable. */}
+      <div
+        className={cn(
+          "mx-auto h-full w-0.5 transition-colors duration-100 motion-reduce:transition-none",
+          active ? "bg-gray-9" : "bg-transparent group-hover:bg-gray-9",
+        )}
+      />
     </div>
   );
 }

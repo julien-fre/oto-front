@@ -273,6 +273,7 @@ export function Sidebar() {
         {open && (
           <SidebarRail
             width={width}
+            active={resizing}
             onResize={setWidth}
             onToggle={() => toggleNav("button")}
             onDragStart={() => setResizing(true)}
