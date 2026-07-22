@@ -89,7 +89,11 @@ export function SidebarRail({
       onPointerDown={handlePointerDown}
       onKeyDown={handleKeyDown}
       className={cn(
-        "group absolute inset-y-0 right-0 z-10 w-2.5 translate-x-1/2 cursor-col-resize",
+        // Tracks the page panel's edge, not the sidebar's own: the panel is
+        // inset by 8px (layout.page-inset), so the handle is pushed out by the
+        // same amount and stops at the panel's bottom. The line you grab is
+        // then exactly the edge you appear to be dragging.
+        "group absolute -right-2 bottom-2 top-0 z-10 w-2.5 translate-x-1/2 cursor-col-resize",
         focusRing,
       )}
     >
