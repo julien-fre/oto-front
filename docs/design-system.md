@@ -76,6 +76,12 @@ typography:
     fontWeight: 500
     lineHeight: 18px
     letterSpacing: -0.002em
+  prose:
+    fontFamily: "Inter var, ui-sans-serif" # running document body only — see Documents
+    fontSize: 13px
+    fontWeight: 400
+    lineHeight: 21px
+    letterSpacing: -0.002em
   caption:
     fontFamily: "Inter var, ui-sans-serif"
     fontSize: 12px
@@ -119,6 +125,8 @@ layout:
   sidebar-peek-width: 224px
   drawer-width: 240px # w-60, below the shell breakpoint
   side-panel-width: 384px # w-96
+  doc-column-width: 640px # max-w-[40rem], the reading column on a document page
+  doc-rail-width: 288px # w-72, the document's context rail (same width as a Kanban column)
   modal-width: 320px # w-80
   palette-width: 576px # max-w-xl
 
@@ -188,6 +196,7 @@ The tokens above are wired into Tailwind v4 via `@theme` in [`src/app/globals.cs
 | `typography.title` | `text-title` |
 | `typography.text` | `text-body` |
 | `typography.text-medium` | `text-body-medium` |
+| `typography.prose` | `text-prose` |
 | `typography.caption` | `text-caption` |
 | `typography.button` | `text-button` |
 | `rounded.sm` … `rounded.xl` | `rounded-sm`, `rounded-md`, `rounded-lg`, `rounded-xl` |
@@ -237,10 +246,11 @@ Inter var sets everything: titles, labels, body, buttons, captions — until Oto
 - `title`: 20px. Reserved for the header of a floating surface (side panel, dialog). Pages do not use it — the top bar carries the page name at `text-body-medium` (see [The app shell](#the-app-shell)).
 - `text`: 13px regular, the default for all running text, field values, and descriptions.
 - `text-medium`: 13px medium, for emphasized labels, section headings inside a page (`<h2>`), active nav items, and selected states. Use it to signal hierarchy within the same size, not to introduce a new size.
+- `prose`: 13px on 21px, **for running document body text only** — paragraphs, list items and table cells inside a [document](#documents). Same size and weight as `text`; the only difference is leading. `text`'s 18px line-height is tuned for dense UI rows, and a full page of prose set that tight is genuinely tiring to read. Do not reach for it anywhere outside a document body.
 - `caption`: 12px, for metadata, counts, timestamps, status pills, and secondary information.
 - `button`: 13px, for all button labels and compact controls.
 
-`text` and `text-medium` cover most of the interface, the distinction between them is weight, not size. Two sizes (13px and 12px) handle everything below the title level. Never introduce intermediate sizes.
+`text` and `text-medium` cover most of the interface, the distinction between them is weight, not size. Two sizes (13px and 12px) handle everything below the title level. Never introduce intermediate sizes — `prose` is a leading variant of an existing size, not a new one.
 
 Hierarchy on a page comes from weight, color, and spacing — not size. A section is `<h2 className="text-body-medium text-gray-12">` with a `mt-1 text-caption text-muted` description under it, separated from the previous section by `mt-8`.
 
@@ -422,7 +432,7 @@ The default way to show a collection. Full-bleed rows, hairline dividers, no car
 ```
 
 `items-baseline` aligns the primary text with the trailing metadata; every text cell truncates. A settings-style list of toggles uses `border-t border-border py-2 first:border-t-0` on each `<li>` instead of `divide-y`.
-See [`knowledge/page.tsx`](../src/app/knowledge/page.tsx), [`processes/page.tsx`](../src/app/processes/page.tsx).
+See [`knowledge-list.tsx`](../src/components/knowledge/knowledge-list.tsx), [`processes/page.tsx`](../src/app/processes/page.tsx).
 
 ### Cards
 
@@ -469,7 +479,7 @@ Two forms, one meaning. A pill where status is plain display, a dot where it lab
 <span className="size-1.5 shrink-0 rounded-full bg-green-9" />
 ```
 
-Map states to tone in one place, next to the type, the way [`connector-status.ts`](../src/lib/connector-status.ts) does — never inline the color at the call site. Green = healthy/active, amber = degraded/paused, red = error, `gray-4`/`gray-6` = absent. Always pair the color with its text label.
+Map states to tone in one place, next to the type, the way [`connector-status.ts`](../src/lib/connector-status.ts) and [`doc-freshness.ts`](../src/lib/doc-freshness.ts) do — never inline the color at the call site. `doc-freshness.ts` is the shorter example to copy: one record per visual form (dot, text), one label map, and a helper for the composed string. Green = healthy/active, amber = degraded/paused, red = error, `gray-4`/`gray-6` = absent. Always pair the color with its text label.
 
 ### Tabs
 
@@ -536,6 +546,103 @@ A tightly-related group of rows at the top of the body (status, access, a summar
 // Inline link in prose or a panel.
 "text-gray-11 underline decoration-gray-7 underline-offset-2 hover:text-gray-12"
 ```
+
+### Sliders
+
+A continuous value inside a settings panel. Native `<input type="range">` — it comes with keyboard
+support, the right ARIA and touch behaviour, and the only cost is vendor-prefixed thumb CSS:
+
+```tsx
+<label className="flex h-7 items-center gap-2">
+  <span className="w-28 shrink-0 truncate text-caption text-muted">{label}</span>
+  <input type="range" className={cn(
+    "h-1 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-gray-5",
+    "[&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none",
+    "[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-12",
+    focusRing)} />
+  <span className="w-8 shrink-0 text-right text-caption tabular-nums text-muted">{shown}</span>
+</label>
+```
+
+A `h-1` gray-5 track with a `size-3` gray-12 thumb, on the `h-7` dense row. The value sits in a
+fixed-width `tabular-nums` cell so the track does not reflow as digits change mid-drag. Use a
+Slider for a continuous quantity and a [Toggle](#switches) for a boolean — never a slider with
+three stops.
+See [`slider.tsx`](../src/components/slider.tsx).
+
+### Documents
+
+A reading surface, not a UI screen: [`knowledge/[slug]`](../src/app/knowledge/[slug]/page.tsx) is
+the reference. Three rules make it feel like a document rather than a settings page.
+
+- **A `{layout.doc-column-width}` (640px) column, `mx-auto`.** Centred in whatever width is left
+  over, so opening or closing the rail rebalances the page instead of stranding the text against
+  one edge. Tables and code blocks break out of the column and scroll inside their own
+  `overflow-x-auto` — the page body never scrolls sideways.
+- **Body copy is `text-prose`** (see [Typography](#typography)). Headings stay `text-body-medium`:
+  hierarchy still comes from weight and spacing, and a document introduces no new sizes.
+- **No page `<h1>`.** The top bar's trailing breadcrumb crumb already is the document's title
+  (see [The app shell](#the-app-shell)). A document opens on its property block instead — a
+  `<dl>` of `text-caption` rows with a `w-28` key column, the metadata triad (owner, verified
+  date, source of truth) always visible and the rest folded behind `Show N more properties`.
+
+**The context rail.** A `{layout.doc-rail-width}` (288px) `<aside>` on the right, holding tabs for
+the things *about* the document rather than in it — its graph, its links, its outline. It uses the
+[Tabs](#tabs) pattern, collapses to a single icon button, and persists its state in a cookie read
+on the server the way the sidebar does, so it never flashes. Below the `shell` breakpoint it
+stacks under the document (`shell:w-72 shell:border-l shell:border-t-0`) rather than becoming an
+overlay — reference material does not deserve a drawer.
+
+Inline references to other docs render through
+[`doc-reference.tsx`](../src/components/knowledge/doc-reference.tsx): the standard inline-link
+treatment plus a leading identity dot in the target's `docColor`, so a doc looks like itself in
+the sidebar, in the graph, and mid-sentence. A reference whose target does not exist renders as
+dotted-underlined `text-placeholder` rather than vanishing — dead links should be visible.
+
+### Graph canvas
+
+A force-directed graph of the workspace, drawn to one `<canvas>`:
+[`graph-canvas.tsx`](../src/components/knowledge/graph-canvas.tsx) renders,
+[`force-graph.ts`](../src/lib/force-graph.ts) simulates. Canvas rather than SVG because a physics
+tick moves several hundred elements at 60Hz, and that many DOM mutations means a style recalc
+every frame.
+
+**Nodes carry their kind in their shape, never in colour alone**: a filled circle is a doc, a
+rounded square a process, a ring a connector, a 50%-alpha circle an unresolved link. Colour is the
+*second* signal, picked by a "Color by" dimension (folder, type, owner, freshness), and every
+choice ships a legend. Radius is `clamp(3 * sqrt(links + 1), 8, 30)` — note the floor, which means
+low-degree nodes are minimum-sized rather than small.
+
+**Hover dims everything else to `0.2`** and leaves the hovered node plus its one-hop neighbours at
+full strength, easing at `next = prev * 0.9 + target * 0.1` per frame so it cross-fades rather
+than snaps. The hovered node takes the `gray-12` ink fill and a 1px ring hugging its edge — there
+is no accent colour in this system, so `gray-12` plays the role Obsidian gives its accent. Labels
+fade with zoom on `clamp(log2(zoom) + 1 - threshold, 0, 1)`.
+
+Colours come from `--gray-*` via [`graph-theme.ts`](../src/lib/graph-theme.ts) rather than being
+hardcoded, so the graph tracks the palette. That file also handles `forced-colors: active`, which
+canvas otherwise ignores completely.
+
+**Non-negotiables for any canvas in this app:**
+
+- Observe the **container** with `ResizeObserver`, never `window.resize` — the sidebar collapsing
+  resizes the page without firing a window resize.
+- Clamp `devicePixelRatio` to 2, guard the `canvas.width` assignment behind an equality check
+  (assigning it resets every bit of context state), and use `setTransform`, never `scale()`.
+- **Stop the loop.** `cancelAnimationFrame` once the layout has settled and nothing is hovered; a
+  graph at rest must cost nothing, which is what makes it acceptable to leave one mounted in a rail.
+- Node positions live in a module-level cache so they survive navigation. A graph whose nodes are
+  all cached is not re-simulated — re-laying out on every visit is the single thing that makes a
+  graph beside a document annoying to use.
+- Under `prefers-reduced-motion`, run the simulation to convergence synchronously and paint the
+  result. Do not freeze a fresh simulation: an unsettled force graph is a hairball, and the
+  settled layout is the information.
+- Accessibility: the wrapper is a `role="listbox"` with one `role="option"` per node
+  (`sr-only`, kept clipped so it stays in the accessibility tree), `aria-activedescendant`
+  tracking the focused node, and an `aria-live` region announcing each move. One tab stop for the
+  whole graph; arrows move between nodes, PageUp/PageDown follow links, Enter opens, `0` resets.
+  Never `role="application"`. Always pair a graph with the same relationships as a list — the list
+  is what always works.
 
 ### Switches
 
