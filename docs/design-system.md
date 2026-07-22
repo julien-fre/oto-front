@@ -249,19 +249,19 @@ Hierarchy on a page comes from weight, color, and spacing — not size. A sectio
 Defined in [`app-shell.tsx`](../src/components/shell/app-shell.tsx). Understand this before adding a route.
 
 ```
-┌──────────────────────────────────────────────┐  bg-gray-2 (the app background)
-│ TopBar — h-10, full width, breadcrumb        │
-├───────────┬──────────────────────────────────┤
-│ Sidebar   │ ╭──────────────────────────────╮ │  the page: white, rounded-xl,
-│ (no       │ │ <main> — your page renders   │ │  1px border, inset 8px
-│ surface   │ │ inside here                  │ │
-│ of its    │ ╰──────────────────────────────╯ │
-│ own)      │                                  │
+┌───────────┬──────────────────────────────────┐  bg-gray-2 (the app background)
+│ Sidebar   │ ╭──────────────────────────────╮ │
+│ (no       │ │ TopBar — h-10, breadcrumb    │ │  the page: white, rounded-xl,
+│ surface   │ ├──────────────────────────────┤ │  1px border, inset 8px
+│ of its    │ │ <main> — your page renders   │ │
+│ own)      │ │ inside here                  │ │
+│           │ ╰──────────────────────────────╯ │
 └───────────┴──────────────────────────────────┘
 ```
 
 - The app background is `{colors.gray-2}` — the same surface the sidebar sits on. The page is a white panel inset 8px with `{rounded.xl}` corners and a 1px border, layered over it. The sidebar carries no surface or border of its own, so it reads as a frame wrapping around the page rather than a column bolted beside it.
 - Below the `shell` breakpoint (52rem) the page goes full-bleed and the sidebar becomes an overlay drawer — there is no column next to it to wrap anything.
+- **The top bar belongs to the page panel, not the window.** Docked, it starts beside the sidebar; collapsed, the panel spans the full width so the bar starts at the left edge and grows a reopen toggle. It never sits above the sidebar — the sidebar has its own header at that height.
 - **The top bar owns the page title.** The trailing breadcrumb crumb is the page's `<h1>`, rendered at `text-body-medium`. Pages must not render their own heading — a page whose first element is an `<h1>` will duplicate the breadcrumb. (There used to be a `PageHeader` component; it's gone.)
 - Everything behind an open modal, drawer, or palette receives `inert`, including the top bar. Follow that when you add a floating surface.
 
@@ -429,11 +429,34 @@ See [`knowledge/page.tsx`](../src/app/knowledge/page.tsx), [`processes/page.tsx`
 Only where a collection needs a logo or a preview — otherwise use a list.
 
 ```tsx
-<button className={cn("rounded-lg border border-border p-3 text-left hover:bg-gray-2", focusRing)}>
+<button className={cn("rounded-lg border border-border bg-background p-4 text-left hover:bg-gray-3", focusRing)}>
+  <p className="mt-3 truncate text-body-medium text-gray-12">{title}</p>
+  <p className="mt-1 line-clamp-2 h-8 text-caption text-muted">{description}</p>
 ```
 
-In a grid: `grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3`, inside a `max-w-6xl` page.
+`p-4` (16px, the upper end of the "between components" range) over `p-3` — a bordered card needs more room around its edge than an unbordered list row does. Cards in the same collection stay the same size regardless of content length: `truncate` on the title, and `h-8 line-clamp-2` on the description — the fixed `h-8` (32px = two 16px `caption` lines) reserves the full two-line block even when the text is short, so a one-line description doesn't leave its card shorter than its neighbors. `bg-background` is explicit (not "no background") because cards sit inside a tinted [Kanban](#kanban-board) column — `hover:bg-gray-3` instead of `hover:bg-gray-2` for the same reason, so the hover state reads against the gray-2 column instead of disappearing into it.
 See [`connector-card.tsx`](../src/components/connector-card.tsx).
+
+### Kanban board
+
+Grouped collections that benefit from at-a-glance columns (one per category/status) instead of a single scrolling list:
+
+```tsx
+<div className="flex h-full min-h-0 gap-4 overflow-x-auto">
+  <div className="flex h-full w-72 shrink-0 flex-col gap-3 rounded-lg bg-gray-2 p-3">
+    <div className="flex shrink-0 items-center gap-2 px-1">
+      <h2 className="text-body-medium text-gray-12">{category}</h2>
+      <span className="text-caption text-muted">{count}</span>
+    </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">{/* cards */}</div>
+  </div>
+</div>
+```
+
+Each column is its own `overflow-y-auto` region so a long column scrolls independently — the board only scrolls horizontally (`overflow-x-auto` on the outer flex), never vertically as a whole. That requires a real height to fill: the page root needs `flex h-full flex-col` up to the `<main>` in [the app shell](#the-app-shell) (which is already `flex-1 overflow-y-auto`), with the filter row `shrink-0` and the board wrapped in `min-h-0 flex-1`. The `bg-gray-2` column fill is what separates a Kanban column from a plain list or grid — cards need `bg-background` (see [Cards](#cards)) to read as raised surfaces against it.
+
+Don't cap the page root at `max-w-6xl` for a Kanban board — that cap exists so a stretching grid doesn't get uncomfortably wide (see [Cards](#cards)), but a board already manages its own width via fixed-width columns plus horizontal scroll, so the cap only donates dead space at the right edge that could otherwise be another sliver of the next column.
+See [`connector-kanban-board.tsx`](../src/components/connector-kanban-board.tsx), [`connectors-browser.tsx`](../src/components/connectors-browser.tsx).
 
 ### Status
 
@@ -501,6 +524,8 @@ The detail view for an item in a list — inset from the viewport edges so it re
 
 `overflow-hidden` on the panel plus `overflow-y-auto` on the body — without both, long content escapes the rounded corners. Rows inside the body separate with `mt-3 border-t border-border pt-3`. The header is the one place `text-title` appears.
 
+A tightly-related group of rows at the top of the body (status, access, a summary count) can sit inside a `rounded-lg bg-gray-2 p-3` card instead of floating directly on the panel's white background — same tinted-surface idea as a [Kanban](#kanban-board) column. Buttons inside that card use `hover:bg-gray-3`, not `hover:bg-gray-2` — the hover needs to read against the card's own fill. Don't wrap every row on a panel this way; reach for it only when a handful of rows are clearly one group and the rest of the panel (tabs, lists) stays on the plain background.
+
 ### Chips, avatars, links
 
 ```tsx
@@ -514,7 +539,7 @@ The detail view for an item in a list — inset from the viewport edges so it re
 
 ### Switches
 
-Use [`<Toggle>`](../src/components/toggle.tsx) — `role="switch"`, `bg-green-9` when on, `bg-gray-6` when off, always with a `label` prop for the accessible name. Don't build checkboxes; a boolean setting in a row is a Toggle.
+Use [`<Toggle>`](../src/components/toggle.tsx) — `role="switch"`, `bg-green-9` when on, `bg-gray-6` when off, always with a `label` prop for the accessible name. Don't build checkboxes; a boolean setting in a row is a Toggle. When on, the switch also gets a soft `blur-md` glow in `green-9/40` behind it (`absolute -inset-2 -z-10`, faded in with `transition-opacity`) — it only ever appears for the checked state, so it reads as reinforcing "on" rather than as decoration, and it's what separates a row of toggles from each other in a dense list (see [Lists](#lists)).
 
 ### Icons
 

@@ -5,8 +5,8 @@ import { SearchIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
 import { connectorStatusKey, statusLabels, type ConnectorStatusKey } from "@/lib/connector-status";
 import type { Connector } from "@/lib/mock-data";
-import { ConnectorCategorySection } from "./connector-category-section";
 import { ConnectorDetailPanel } from "./connector-detail-panel";
+import { ConnectorKanbanBoard } from "./connector-kanban-board";
 
 function groupByCategory(connectors: Connector[]) {
   const byCategory = new Map<string, Connector[]>();
@@ -65,8 +65,8 @@ export function ConnectorsBrowser({ connectors }: { connectors: Connector[] }) {
 
   return (
     <>
-      <div className="mt-6 flex flex-col gap-6" inert={selected != null}>
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="mt-6 flex h-full min-h-0 flex-col gap-6" inert={selected != null}>
+        <div className="flex shrink-0 flex-wrap items-center gap-3">
           <div
             className={cn(
               "flex h-8 w-64 items-center gap-2 rounded-md border border-border px-2",
@@ -107,14 +107,9 @@ export function ConnectorsBrowser({ connectors }: { connectors: Connector[] }) {
         {categories.length === 0 ? (
           <p className="text-body text-muted">No connectors match your filters.</p>
         ) : (
-          categories.map(([category, categoryConnectors]) => (
-            <ConnectorCategorySection
-              key={category}
-              category={category}
-              connectors={categoryConnectors}
-              onSelect={openConnector}
-            />
-          ))
+          <div className="min-h-0 flex-1">
+            <ConnectorKanbanBoard categories={categories} onSelect={openConnector} />
+          </div>
         )}
       </div>
       <ConnectorDetailPanel key={selected?.id ?? "closed"} connector={selected} onClose={closePanel} />

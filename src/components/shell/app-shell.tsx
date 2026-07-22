@@ -22,10 +22,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [open, consumeNavHandoff]);
 
   return (
-    // The app background is the sidebar's surface. The breadcrumb bar is
-    // scoped to the page column only (beside the sidebar, not above it) —
-    // the sidebar carries its own header — and the page is an inset rounded
-    // panel on all four sides so the sidebar reads as a frame around it.
+    // The app background is the sidebar's surface; the page is an inset,
+    // rounded panel layered over it, so the sidebar reads as a frame around
+    // the content. The breadcrumb bar belongs to the panel, not the window —
+    // docked, it starts beside the sidebar; collapsed, the panel spans the
+    // full width and the bar starts at the left edge with the reopen toggle.
     <div className="flex h-dvh bg-gray-2">
       <Sidebar />
       <div
@@ -35,7 +36,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
         inert={mobileOpen || paletteOpen}
       >
-        <TopBar inert={mobileOpen || paletteOpen} />
+        <TopBar />
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
       <CommandPalette />
