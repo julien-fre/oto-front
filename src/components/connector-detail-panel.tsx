@@ -52,7 +52,7 @@ export function ConnectorDetailPanel({
   connector: Connector | null;
   onClose: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>("tools");
+  const [tab, setTab] = useState<Tab>("team");
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const open = connector != null;
 
@@ -132,95 +132,97 @@ export function ConnectorDetailPanel({
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          <div className="relative flex items-center justify-between">
-            <span className="text-body text-gray-12">Status</span>
-            <button
-              type="button"
-              onClick={() => setStatusMenuOpen((o) => !o)}
-              aria-haspopup="menu"
-              aria-expanded={statusMenuOpen}
-              className={cn(
-                "flex h-7 items-center gap-1.5 rounded-full border border-border px-3 text-button text-gray-12 hover:bg-gray-2",
-                focusRing,
-              )}
-            >
-              <span className={cn("size-1.5 shrink-0 rounded-full", statusDotClassName[status])} />
-              {statusLabels[status]}
-              <ChevronRightIcon className="rotate-90 text-icon" />
-            </button>
-            {statusMenuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
-                <div
-                  role="menu"
-                  className="absolute right-0 top-full z-20 mt-1 w-32 rounded-lg border border-border bg-background py-1 shadow-dropdown"
-                >
-                  {statusActions(status).map((a) => (
-                    <button
-                      key={a.label}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setStatus(a.next);
-                        setStatusMenuOpen(false);
-                      }}
-                      className={cn(
-                        "block w-full px-3 py-1.5 text-left text-body text-gray-12 hover:bg-gray-2",
-                        focusRing,
-                      )}
-                    >
-                      {a.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-            <span className="text-body text-gray-12">Access</span>
-            {connector.secretKind === "none" ? (
-              <span className="text-caption text-muted">No access needed</span>
-            ) : (
+          <div className="flex flex-col rounded-lg bg-gray-2 p-3">
+            <div className="relative flex items-center justify-between">
+              <span className="text-body text-gray-12">Status</span>
               <button
                 type="button"
-                onClick={() => setCredentialModalOpen(true)}
+                onClick={() => setStatusMenuOpen((o) => !o)}
+                aria-haspopup="menu"
+                aria-expanded={statusMenuOpen}
                 className={cn(
-                  "h-7 rounded-full px-3 text-button",
-                  hasCredential
-                    ? "border border-border text-gray-12 hover:bg-gray-2"
-                    : "bg-gray-12 text-background hover:opacity-90",
+                  "flex h-7 items-center gap-1.5 rounded-full border border-border px-3 text-button text-gray-12 hover:bg-gray-3",
                   focusRing,
                 )}
               >
-                {hasCredential ? "Update" : "Connect"}
+                <span className={cn("size-1.5 shrink-0 rounded-full", statusDotClassName[status])} />
+                {statusLabels[status]}
+                <ChevronRightIcon className="rotate-90 text-icon" />
               </button>
-            )}
-          </div>
-
-          <div className="mt-3 border-t border-border pt-3">
-            <div className="flex items-center justify-between">
-              <span className="text-body text-gray-12">Used by</span>
-              <span className="text-body text-gray-12">
-                {usage.length === 0
-                  ? "No processes"
-                  : `${usage.length} process${usage.length === 1 ? "" : "es"}`}
-              </span>
+              {statusMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-full z-20 mt-1 w-32 rounded-lg border border-border bg-background py-1 shadow-dropdown"
+                  >
+                    {statusActions(status).map((a) => (
+                      <button
+                        key={a.label}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setStatus(a.next);
+                          setStatusMenuOpen(false);
+                        }}
+                        className={cn(
+                          "block w-full px-3 py-1.5 text-left text-body text-gray-12 hover:bg-gray-2",
+                          focusRing,
+                        )}
+                      >
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-            {usage.length > 0 && (
-              <ul className="mt-2 flex flex-col gap-1">
-                {usage.map((p) => (
-                  <li key={p.slug}>
-                    <Link
-                      href={`/processes/${p.slug}`}
-                      className={cn("text-body", linkClassName, focusRing)}
-                    >
-                      {p.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
+
+            <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+              <span className="text-body text-gray-12">Access</span>
+              {connector.secretKind === "none" ? (
+                <span className="text-caption text-muted">No access needed</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setCredentialModalOpen(true)}
+                  className={cn(
+                    "h-7 rounded-full px-3 text-button",
+                    hasCredential
+                      ? "border border-border text-gray-12 hover:bg-gray-3"
+                      : "bg-gray-12 text-background hover:opacity-90",
+                    focusRing,
+                  )}
+                >
+                  {hasCredential ? "Update" : "Connect"}
+                </button>
+              )}
+            </div>
+
+            <div className="mt-3 border-t border-border pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-body text-gray-12">Used by</span>
+                <span className="text-body text-gray-12">
+                  {usage.length === 0
+                    ? "No processes"
+                    : `${usage.length} process${usage.length === 1 ? "" : "es"}`}
+                </span>
+              </div>
+              {usage.length > 0 && (
+                <ul className="mt-2 flex flex-col gap-1">
+                  {usage.map((p) => (
+                    <li key={p.slug}>
+                      <Link
+                        href={`/processes/${p.slug}`}
+                        className={cn("text-body", linkClassName, focusRing)}
+                      >
+                        {p.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           <div className="mt-6 flex items-center gap-1 border-b border-border">
