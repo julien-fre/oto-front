@@ -15,27 +15,25 @@ export function ProcessTabs({ slug }: { slug: string }) {
   const base = `/processes/${slug}`;
 
   return (
-    <div
-      role="tablist"
-      aria-label="Process views"
-      className="inline-flex items-center gap-1 rounded-full bg-gray-11/90 p-1 backdrop-blur-md"
-    >
-      {tabs.map(({ href: tabHref, label }) => {
-        const href = `${base}${tabHref}`;
+    <div role="tablist" aria-label="Process views" className="flex items-center gap-1">
+      {tabs.map((tab) => {
+        const href = `${base}${tab.href}`;
         const active = pathname === href;
         return (
           <Link
-            key={label}
+            key={tab.label}
             href={href}
             role="tab"
             aria-selected={active}
             className={cn(
-              "flex h-8 items-center rounded-full px-3 text-caption transition-colors duration-100 motion-reduce:transition-none",
-              active ? "text-gray-1" : "text-gray-1/45 hover:bg-gray-1/10 hover:text-gray-1/70",
+              "flex h-7 items-center rounded-full px-3 text-button transition-colors duration-100 motion-reduce:transition-none",
+              active
+                ? "bg-interactive-checked text-gray-12"
+                : "border border-border text-muted hover:bg-interactive-hovered hover:text-gray-12",
               focusRing,
             )}
           >
-            {label}
+            {tab.label}
           </Link>
         );
       })}
