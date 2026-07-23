@@ -281,6 +281,23 @@ export function createSimulation(
       if (alpha < to) alpha = to;
     },
     /**
+     * Place every free node at `scale` times its position in `origin` — pulled
+     * toward the centre, ready to spring back out. Used for the entry bloom.
+     * Absolute (from a snapshot) rather than relative (scaling current
+     * positions) so that running it twice lands in the same place — dev-mode
+     * StrictMode double-invokes the effect that calls this, and a relative
+     * scale would compound. Pinned nodes and nodes missing from the snapshot
+     * stay put.
+     */
+    perturbFrom(origin: Map<string, { x: number; y: number }>, scale: number) {
+      for (const n of nodes) {
+        const at = origin.get(n.id);
+        if (!at) continue;
+        if (n.fx == null) n.x = at.x * scale;
+        if (n.fy == null) n.y = at.y * scale;
+      }
+    },
+    /**
      * Declare the layout already at rest. Used when every node came back from
      * a position cache: the nodes are where a previous run left them, so
      * running physics over them again would only shuffle a settled graph.

@@ -13,6 +13,7 @@ colors:
   focus-ring: "#0090ff" # blue-9; blue-7 fails the 3:1 non-text contrast minimum for focus indicators
   interactive-hovered: "#1c20240f"
   interactive-checked: "#1c202417"
+  accent: "#006ad8" # Oto's secondary/brand color — the "on/enabled" fill of a switch. ~5.6:1 on white (clears 3:1 non-text). Not blue-9 (#0090ff, the focus ring)
 
   # Gray scale — cool-tinted (Radix Slate): a few degrees toward blue so
   # surfaces read crisp rather than flat
@@ -126,7 +127,7 @@ layout:
   drawer-width: 240px # w-60, below the shell breakpoint
   side-panel-width: 384px # w-96
   doc-column-width: 640px # max-w-[40rem], the reading column on a document page
-  doc-rail-width: 288px # w-72, the document's context rail (same width as a Kanban column)
+  doc-rail-width: 384px # w-96, the document's graph rail (same width as a side panel)
   modal-width: 320px # w-80
   palette-width: 576px # max-w-xl
 
@@ -193,6 +194,7 @@ The tokens above are wired into Tailwind v4 via `@theme` in [`src/app/globals.cs
 | `colors.red-9` / `red-11` (etc.) | `bg-red-9`, `text-red-11`, … |
 | `colors.background`, `border`, `muted`, `icon`, `placeholder`, `focus-ring` | `bg-background`, `border-border`, `text-muted`, … |
 | `colors.interactive-hovered` / `interactive-checked` | `hover:bg-interactive-hovered`, `bg-interactive-checked` |
+| `colors.accent` | `bg-accent`, `text-accent`, `border-accent` |
 | `typography.title` | `text-title` |
 | `typography.text` | `text-body` |
 | `typography.text-medium` | `text-body-medium` |
@@ -236,6 +238,8 @@ Each gray scale step encodes intent:
 `interactive-hovered` / `interactive-checked` are translucent black overlays. Use them for hover and selected states on elements that sit on an unknown or tinted surface (nav rows, icon buttons, filter pills); use `gray-2` / `gray-3` where the element sits on a known white surface (cards, list rows, menu items).
 
 Chromatic scales carry meaning only, never decoration. Red for errors, green for success or "active", amber for warnings or "paused", blue-9 for focus rings (blue-7 is too light to meet the 3:1 non-text contrast minimum against white or gray-2). The `-9` step is the solid fill, `-11` the readable text on a light tint — a status pill is `bg-green-9/15 text-green-11`, never `bg-green-9 text-white`.
+
+`accent` (#006ad8) is Oto's secondary/brand color, and the one hue in the system that carries identity rather than a status. It is not decoration and not a fourth status color: it fills the "on/enabled" side of an interactive control — today that is the [switch](#switches) — so a filled accent still reads as a *state* (this control is on) rather than a splash of brand. It stays off text, off borders that aren't a control's own edge, and off the primary button (that stays `gray-12` — see [Buttons](#buttons)). Distinct from `blue-9`, which remains the focus ring only.
 
 The `label-dots` list is the one exception to "color signals state": it is identity color, used to tell sibling rows apart in a tree, and it only ever appears as a small dot or a leading icon — never as a background, a border, or text.
 
@@ -586,12 +590,14 @@ the reference. Three rules make it feel like a document rather than a settings p
   `<dl>` of `text-caption` rows with a `w-28` key column, the metadata triad (owner, verified
   date, source of truth) always visible and the rest folded behind `Show N more properties`.
 
-**The context rail.** A `{layout.doc-rail-width}` (288px) `<aside>` on the right, holding tabs for
-the things *about* the document rather than in it — its graph, its links, its outline. It uses the
-[Tabs](#tabs) pattern, collapses to a single icon button, and persists its state in a cookie read
-on the server the way the sidebar does, so it never flashes. Below the `shell` breakpoint it
-stacks under the document (`shell:w-72 shell:border-l shell:border-t-0`) rather than becoming an
-overlay — reference material does not deserve a drawer.
+**The graph rail.** A `{layout.doc-rail-width}` (384px) `<aside>` on the right — a rounded card,
+inset from the page edges and sticky at full viewport height, holding exactly one thing: the
+document's local graph with its depth slider. (It briefly carried Links and Outline tabs too; cut
+by design review — the link counts already live in the property block.) It collapses to a single
+icon button wearing the graph icon, and persists its state in a cookie read on the server the way
+the sidebar does, so it never flashes. Below the `shell` breakpoint it stacks under the document
+with a plain top border rather than becoming an overlay — reference material does not deserve a
+drawer.
 
 Inline references to other docs render through
 [`doc-reference.tsx`](../src/components/knowledge/doc-reference.tsx): the standard inline-link
@@ -615,8 +621,9 @@ low-degree nodes are minimum-sized rather than small.
 
 **Hover dims everything else to `0.2`** and leaves the hovered node plus its one-hop neighbours at
 full strength, easing at `next = prev * 0.9 + target * 0.1` per frame so it cross-fades rather
-than snaps. The hovered node takes the `gray-12` ink fill and a 1px ring hugging its edge — there
-is no accent colour in this system, so `gray-12` plays the role Obsidian gives its accent. Labels
+than snaps. The hovered node takes the `gray-12` ink fill and a 1px ring hugging its edge — the
+graph stays deliberately monochrome and does not reach for the `accent` brand color, so `gray-12`
+plays the role Obsidian gives its accent here. Labels
 fade with zoom on `clamp(log2(zoom) + 1 - threshold, 0, 1)`.
 
 Colours come from `--gray-*` via [`graph-theme.ts`](../src/lib/graph-theme.ts) rather than being
@@ -646,7 +653,7 @@ canvas otherwise ignores completely.
 
 ### Switches
 
-Use [`<Toggle>`](../src/components/toggle.tsx) — `role="switch"`, `bg-green-9` when on, `bg-gray-6` when off, always with a `label` prop for the accessible name. Don't build checkboxes; a boolean setting in a row is a Toggle. When on, the switch also gets a soft `blur-md` glow in `green-9/40` behind it (`absolute -inset-2 -z-10`, faded in with `transition-opacity`) — it only ever appears for the checked state, so it reads as reinforcing "on" rather than as decoration, and it's what separates a row of toggles from each other in a dense list (see [Lists](#lists)).
+Use [`<Toggle>`](../src/components/toggle.tsx) — `role="switch"`, `bg-accent` when on, `bg-gray-6` when off, always with a `label` prop for the accessible name. Don't build checkboxes; a boolean setting in a row is a Toggle. The `accent` fill is the [brand color](#colors) doing its one job — marking the "on/enabled" side of a control — so it reads as state, not decoration. This is the same switch for a connector's access rows, a graph setting, or a process's Active flag; the accessible label and any adjacent text (`Active`/`Inactive`) carry the specific meaning, the color just says "on".
 
 ### Icons
 
@@ -702,7 +709,8 @@ Say the section is `Reports`. In order:
 - Use `{colors.border}` at 1px for all borders. Use `{colors.gray-12}` for primary text, never pure black.
 - Pair color with an icon or text label to signal state, never color alone.
 - Apply typography tokens instead of setting font size, line height, or weight by hand.
-- Keep solid accent color for the single most important action on a view.
+- Keep the solid `gray-12` fill for the single most important action on a view (the primary button); it is the loudest surface in the system.
+- Use `{colors.accent}` only for the "on/enabled" fill of a control (the [switch](#switches)) — never for text, decoration, a border, or the primary button. Reach for `blue-9` only as the focus ring.
 - Reach for an existing pattern in [Component patterns](#component-patterns) before composing a new one; when you do compose one, add it there.
 - Don't use chromatic color for decoration, only for errors, success, warnings, and state.
 - Don't introduce font sizes outside 12/13/20px or weights outside 400/500.

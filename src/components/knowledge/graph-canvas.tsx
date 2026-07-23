@@ -52,7 +52,20 @@ export const DISPLAY_RANGES = {
 // change is the single most-cited complaint about Obsidian's local graph —
 // nodes shuffle and you lose track of where you came from. Keeping coordinates
 // in a module-level cache means a node you have already seen stays put.
-const positionCache = new Map<string, { x: number; y: number }>();
+//
+// The cache is namespaced by layout scope: the global graph and each doc's
+// local graph get their own space, so a node the global graph flung to the far
+// edge does not drag the local graph's copy of it out there too. Without this,
+// a local graph inherits the global sprawl and frames tiny and off-centre.
+const positionCaches = new Map<string, Map<string, { x: number; y: number }>>();
+function positionCacheFor(scope: string) {
+  let cache = positionCaches.get(scope);
+  if (!cache) {
+    cache = new Map();
+    positionCaches.set(scope, cache);
+  }
+  return cache;
+}
 
 const ZOOM_MIN = 1 / 128;
 const ZOOM_MAX = 8;
@@ -60,6 +73,18 @@ const DRAG_THRESHOLD_SQ = 25; // 5px, Obsidian's exact click-vs-drag cutoff
 const DIM = 0.2; // what everything unrelated to the hovered node fades to
 const EASE = 0.1; // per-frame lerp: new = old * 0.9 + target * 0.1
 const HIT_SLOP = 6;
+const COMPACT_LABEL_MAX = 22; // chars before a rail label is truncated at rest
+// Entry animation: how far the nodes are pulled toward the centre before they
+// bloom back out to their settled places, and the alpha that drives the bloom.
+// Chosen by measurement, not feel: reheating physics first *contracts* the
+// layout toward its sustained-alpha equilibrium before the decay lets it
+// re-expand, and that dip is what read as nervous. At alpha 0.05 the dip is
+// ~2% — the motion is a single gentle bloom outward (90% → 100% of the settled
+// span over ~3s) that lands back on the exact settled layout, so the fixed
+// camera stays correct. Raise ENTRY_ALPHA and the dip comes back; you have
+// been warned.
+const ENTRY_PERTURB = 0.9;
+const ENTRY_ALPHA = 0.05;
 
 type Transform = { x: number; y: number; k: number };
 
@@ -108,6 +133,12 @@ export type GraphCanvasProps = {
   depth?: number;
   /** Rail mode — smaller labels, no edge labels, no keyboard zoom hints. */
   compact?: boolean;
+  /** Upper bound on the fit-to-view zoom. Higher lets a small graph fill a
+   *  large canvas (the rail wants this so its labels are legible). */
+  fitZoomMax?: number;
+  /** Namespaces the position cache. The global graph and each local graph pass
+   *  distinct scopes so they do not share (and distort) each other's layouts. */
+  layoutScope?: string;
   ariaLabel: string;
   className?: string;
   onHoverChange?: (node: GraphNode | null, screen: { x: number; y: number } | null) => void;
@@ -121,6 +152,8 @@ export function GraphCanvas({
   centerId,
   depth,
   compact = false,
+  fitZoomMax = 1.5,
+  layoutScope = "global",
   ariaLabel,
   className,
   onHoverChange,
@@ -148,6 +181,11 @@ export function GraphCanvas({
   const colorByRef = useRef(colorBy);
   const focusedRef = useRef<string | null>(null);
   const sizeRef = useRef({ w: 0, h: 0 });
+  // Set once the user zooms or pans by hand. While it is false the camera
+  // re-frames the graph on every resize (so the rail growing to full height, or
+  // the sidebar collapsing, keeps the graph centred); once true, a resize
+  // leaves their view alone.
+  const userAdjustedRef = useRef(false);
 
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
@@ -301,7 +339,7 @@ export function GraphCanvas({
       if (d.edgeLabels && !compact && touched && alpha > 0.5) {
         const label = EDGE_LABELS[e.kind];
         const fontSize = 11 / t.k;
-        ctx.font = `${fontSize}px var(--font-inter), ui-sans-serif, sans-serif`;
+        ctx.font = `${fontSize}px ${theme.fontFamily}`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         const mx = (x1 + x2) / 2;
@@ -412,11 +450,18 @@ export function GraphCanvas({
       }
 
       ctx.globalAlpha = alpha;
-      ctx.font = `${fontSize}px var(--font-inter), ui-sans-serif, sans-serif`;
+      ctx.font = `${fontSize}px ${theme.fontFamily}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       ctx.fillStyle = isHovered || isFocused ? theme.ink : theme.label;
-      ctx.fillText(node.label, p.x, p.y + r + 5 * scale);
+      // In the narrow rail, long titles would run off the canvas; truncate at
+      // rest and reveal the full name on hover or keyboard focus (and it's
+      // always spelled out in the Links tab).
+      const label =
+        compact && !isHovered && !isFocused && node.label.length > COMPACT_LABEL_MAX
+          ? `${node.label.slice(0, COMPACT_LABEL_MAX - 1).trimEnd()}…`
+          : node.label;
+      ctx.fillText(label, p.x, p.y + r + 5 * scale);
     }
 
     ctx.restore();
@@ -470,32 +515,69 @@ export function GraphCanvas({
   }, [draw, nodeById, toWorld, hitRadius]);
 
   /** Frame the whole graph with a margin. Obsidian has no such control; this is
-   *  a deliberate addition — "I lost the graph" is its top complaint. */
-  const fitToView = useCallback(() => {
+   *  a deliberate addition — "I lost the graph" is its top complaint. Pass
+   *  measureLabels=false for the cheap radius-only frame used each frame during
+   *  the entry bloom; the accurate label-aware frame runs once when it settles. */
+  const fitToView = useCallback((measureLabels = true) => {
     const sim = simRef.current;
     const { w, h } = sizeRef.current;
     if (!sim || w === 0 || h === 0 || sim.nodes.length === 0) return;
+    const d = displayRef.current;
+    const ctx = measureLabels ? (canvasRef.current?.getContext("2d") ?? null) : null;
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
     let maxY = -Infinity;
+    // Frame the *settled* layout, read from the position cache, not the live
+    // node positions. During the entry bloom the live nodes are compressed
+    // toward the centre; framing those (which a resize or fonts-ready re-fit can
+    // trigger mid-bloom) would zoom in on the compressed state, and the graph
+    // would then bloom straight out of frame. The cache holds the final layout
+    // throughout, so the camera stays put and the bloom plays inside it.
+    //
+    // Frame the visible extent, not just node centres: a label is centred under
+    // its node and hangs below it, so each node claims its radius plus, below, a
+    // label's height, and, to each side, half the label's measured width.
+    const posCache = positionCacheFor(layoutScope);
     for (const n of sim.nodes) {
-      minX = Math.min(minX, n.x);
-      maxX = Math.max(maxX, n.x);
-      minY = Math.min(minY, n.y);
-      maxY = Math.max(maxY, n.y);
+      const node = nodeById.get(n.id);
+      const at = posCache.get(n.id) ?? n;
+      const r = node ? radiusFor(node, d, depth) : 8;
+      const fontSize = (compact ? 9 : 11) + r / 5;
+      const labelHang = r + 6 + fontSize;
+      let halfLabel = r;
+      if (node && ctx) {
+        // Measured with an untransformed context, so the width comes back in
+        // world units (the font size is already world units).
+        ctx.font = `${fontSize}px ${themeRef.current?.fontFamily ?? "ui-sans-serif, sans-serif"}`;
+        const label =
+          compact && node.label.length > COMPACT_LABEL_MAX
+            ? `${node.label.slice(0, COMPACT_LABEL_MAX - 1)}…`
+            : node.label;
+        halfLabel = Math.max(r, ctx.measureText(label).width / 2);
+      }
+      minX = Math.min(minX, at.x - halfLabel);
+      maxX = Math.max(maxX, at.x + halfLabel);
+      minY = Math.min(minY, at.y - r);
+      maxY = Math.max(maxY, at.y + labelHang);
     }
-    const pad = 80;
+    const pad = 20;
     const width = maxX - minX + pad * 2;
     const height = maxY - minY + pad * 2;
-    const k = clamp(Math.min(w / width, h / height), ZOOM_MIN, 1.5);
+    // Fill ~85% of the frame, so the whole graph reads with a comfortable
+    // margin — and so the entry bloom's brief spring-back has room before it
+    // would touch an edge.
+    const k = clamp(Math.min(w / width, h / height) * 0.85, ZOOM_MIN, fitZoomMax);
     transformRef.current = {
       k,
       x: w / 2 - ((minX + maxX) / 2) * k,
       y: h / 2 - ((minY + maxY) / 2) * k,
     };
+    // A programmatic frame is not a manual adjustment — clear the flag so the
+    // next resize re-frames too.
+    userAdjustedRef.current = false;
     kick();
-  }, [kick]);
+  }, [kick, fitZoomMax, nodeById, depth, compact, layoutScope]);
 
   // ── Simulation lifecycle ───────────────────────────────────────────────────
 
@@ -505,18 +587,39 @@ export function GraphCanvas({
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   }, []);
 
+  // The first fit can run before the web font has loaded, so measureText comes
+  // back a hair narrow and the widest labels clip. Re-fit once fonts are ready
+  // (unless the user has already taken the camera over), now that the metrics
+  // are real.
+  useEffect(() => {
+    let cancelled = false;
+    document.fonts?.ready.then(() => {
+      if (!cancelled && !userAdjustedRef.current) fitToView();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fitToView]);
+
   useEffect(() => {
     nodesRef.current = graph.nodes;
     graphRef.current = graph;
     labelWidthRef.current.clear();
+    const cache = positionCacheFor(layoutScope);
 
     const placed = new Map<string, { x: number; y: number }>();
     for (const node of graph.nodes) {
-      const cached = positionCache.get(node.id);
+      const cached = cache.get(node.id);
       if (cached) placed.set(node.id, cached);
     }
 
     const simNodes: SimNode[] = graph.nodes.map((node, i) => {
+      // In a local graph the centre node is pinned at the world origin, so its
+      // neighbourhood settles symmetrically around it and it always frames dead
+      // centre — rather than drifting to the edge of its own cloud.
+      if (node.id === centerId) {
+        return { id: node.id, x: 0, y: 0, vx: 0, vy: 0, fx: 0, fy: 0, radius: COLLIDE_RADIUS };
+      }
       const at = placed.get(node.id) ?? seedNew(node, i, placed, graph);
       return {
         id: node.id,
@@ -551,24 +654,70 @@ export function GraphCanvas({
     // This doubles as the reduced-motion path, so there is no second branch for
     // it: freezing a *fresh* simulation would leave a hairball on screen, and
     // it is the settled layout that carries the information.
-    const hasNewNodes = graph.nodes.some((n) => !positionCache.has(n.id));
+    const hasNewNodes = graph.nodes.some((n) => !cache.has(n.id));
     if (hasNewNodes) sim.settle();
     else sim.freeze();
 
-    for (const n of sim.nodes) positionCache.set(n.id, { x: n.x, y: n.y });
+    // Cache the *settled* positions, the layout a revisit restores. The entry
+    // bloom (below, in its own effect) perturbs the live nodes afterwards, but
+    // never touches this cache — so a revisit always finds the final layout.
+    for (const n of sim.nodes) cache.set(n.id, { x: n.x, y: n.y });
 
+    // Frame the final layout. The camera then stays put while the entry bloom
+    // animates into it, so the whole brain is in view the entire time.
     fitToView();
     draw();
 
     return () => {
-      for (const n of sim.nodes) positionCache.set(n.id, { x: n.x, y: n.y });
+      // Only persist a *settled* layout. Mid-bloom the nodes are compressed
+      // toward the centre; caching those would make a revisit (or StrictMode's
+      // second mount) restore a half-animated frame instead of the final one.
+      if (sim.settled) for (const n of sim.nodes) cache.set(n.id, { x: n.x, y: n.y });
     };
     // `forces` is applied via its own effect below so a slider drag does not
     // rebuild the simulation and throw away every position.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graph, draw, fitToView, kick]);
+  }, [graph, layoutScope, draw, fitToView, kick]);
 
+  // Latest kick(), read through a ref so the entry-bloom effect below does not
+  // re-run every time kick's identity changes (which would re-bloom on filter
+  // changes).
+  const kickRef = useRef(kick);
   useEffect(() => {
+    kickRef.current = kick;
+  }, [kick]);
+
+  // The entry bloom, in its own mount-only effect (deps [compact], which is
+  // stable). This is what runs on the first view of the full graph — and,
+  // crucially, NOT on a filter change (the graph effect above re-runs then, but
+  // this one does not). The graph effect has already settled the sim and framed
+  // it; here we pull the nodes toward the centre and reheat, so they bloom back
+  // out to their settled places while the camera holds the whole brain in view.
+  //
+  // Runs on every real mount, so opening the graph always greets you with the
+  // settle. Under StrictMode it runs on both the discarded and the surviving
+  // mount — harmless, because the surviving one is the one you see, and the
+  // guarded cache above keeps the target layout intact between them.
+  useEffect(() => {
+    const sim = simRef.current;
+    if (!sim || compact || reducedRef.current) return;
+    sim.perturbFrom(positionCacheFor(layoutScope), ENTRY_PERTURB);
+    sim.reheat(ENTRY_ALPHA);
+    kickRef.current();
+  }, [compact, layoutScope]);
+
+  // Apply live force changes — but not on mount. The simulation is already
+  // built with the current forces in the effect above, and calling setForces
+  // here reheats it to alpha 0.3, which re-shuffles the just-settled graph on
+  // entry. So we only act when the forces value actually differs from what the
+  // simulation already has. Comparing the value (not a "first run" flag) is
+  // what makes this survive StrictMode's double-invoked effects in dev — a flag
+  // gets set on the first pass and then fires on the second, re-shuffling the
+  // graph; a value compare skips both passes.
+  const appliedForcesRef = useRef(forces);
+  useEffect(() => {
+    if (appliedForcesRef.current === forces) return;
+    appliedForcesRef.current = forces;
     simRef.current?.setForces(forces);
     kick();
   }, [forces, kick]);
@@ -584,13 +733,16 @@ export function GraphCanvas({
 
   // Persist positions on unmount too, so a navigation keeps the layout.
   useEffect(() => {
+    const cache = positionCacheFor(layoutScope);
     return () => {
       const sim = simRef.current;
-      if (sim) for (const n of sim.nodes) positionCache.set(n.id, { x: n.x, y: n.y });
+      // Same guard as the graph effect: only a settled layout is worth keeping,
+      // so a mid-bloom unmount does not cache half-animated positions.
+      if (sim?.settled) for (const n of sim.nodes) cache.set(n.id, { x: n.x, y: n.y });
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
-  }, []);
+  }, [layoutScope]);
 
   // ── Sizing ─────────────────────────────────────────────────────────────────
 
@@ -605,13 +757,16 @@ export function GraphCanvas({
       if (!box) return;
       const changed = box.width !== sizeRef.current.w || box.height !== sizeRef.current.h;
       if (!changed) return;
-      const first = sizeRef.current.w === 0;
       sizeRef.current = { w: box.width, h: box.height };
       // Resize inside the frame, not in the observer callback, to avoid
       // "ResizeObserver loop completed with undelivered notifications".
       requestAnimationFrame(() => {
-        if (first) fitToView();
-        draw();
+        // Re-frame on every resize until the user takes the camera over — this
+        // is what keeps the graph centred as the rail grows to full height on
+        // mount, and as the sidebar collapses. After a manual zoom/pan, leave
+        // their view untouched and just repaint at the new size.
+        if (!userAdjustedRef.current) fitToView();
+        else draw();
         kick();
       });
     });
@@ -710,6 +865,7 @@ export function GraphCanvas({
             simRef.current?.setAlphaTarget(0.3);
           }
         } else {
+          userAdjustedRef.current = true;
           transformRef.current = {
             ...transformRef.current,
             x: drag.panX + dx,
@@ -741,10 +897,10 @@ export function GraphCanvas({
 
     if (drag.id) {
       const node = simRef.current?.get(drag.id);
-      if (node) {
-        // Release rather than pin. Obsidian does not have drag-to-pin — the
-        // node drifts back to equilibrium, and that is the behaviour people
-        // recognise.
+      // Release rather than pin. Obsidian does not have drag-to-pin — the node
+      // drifts back to equilibrium, and that is the behaviour people recognise.
+      // The local graph's centre is the exception: it stays anchored at origin.
+      if (node && drag.id !== centerId) {
         node.fx = null;
         node.fy = null;
       }
@@ -788,6 +944,7 @@ export function GraphCanvas({
       const t = transformRef.current;
       const k = clamp(t.k * Math.pow(1.5, -delta / 120), ZOOM_MIN, ZOOM_MAX);
       if (k === t.k) return;
+      userAdjustedRef.current = true;
       // Anchor on the cursor when zooming in, on the viewport centre when
       // zooming out. The asymmetry is deliberate: it means zooming out always
       // recovers the whole graph instead of drifting into a corner.
@@ -844,6 +1001,7 @@ export function GraphCanvas({
 
   const zoomBy = useCallback(
     (factor: number) => {
+      userAdjustedRef.current = true;
       const t = transformRef.current;
       const k = clamp(t.k * factor, ZOOM_MIN, ZOOM_MAX);
       const { w, h } = sizeRef.current;

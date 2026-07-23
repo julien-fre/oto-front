@@ -10,7 +10,7 @@ import {
   writeGraphCookie,
   type GraphSettings,
 } from "@/lib/graph-settings";
-import { buildGraph, colorLegend, type GraphNode } from "@/lib/knowledge-graph";
+import { buildGraph, colorLegend, type GraphNode, type NodeKind } from "@/lib/knowledge-graph";
 import { LABEL_DOT_COLORS } from "@/lib/mock-data";
 import { GraphCanvas } from "./graph-canvas";
 import { GraphSettingsPanel } from "./graph-settings-panel";
@@ -42,6 +42,20 @@ export function KnowledgeGraph({ initialSettings }: { initialSettings: GraphSett
   }, [settings]);
 
   const docCount = graph.nodes.filter((n) => n.kind === "doc").length;
+
+  // What each node *shape* means — the counterpart to the colour legend. Only
+  // the kinds actually on screen appear, and the swatch mirrors the node shape
+  // (circle / square / ring) in neutral grey, so shape reads as its own signal
+  // independent of whatever "Color by" is set to.
+  const shapes = useMemo(() => {
+    const present = new Set(graph.nodes.map((n) => n.kind));
+    const order: { kind: NodeKind; label: string }[] = [
+      { kind: "doc", label: "Doc" },
+      { kind: "process", label: "Process" },
+      { kind: "connector", label: "Connector" },
+    ];
+    return order.filter((s) => present.has(s.kind));
+  }, [graph]);
 
   return (
     <div className="relative h-full w-full rounded-lg border border-border bg-gray-1">
@@ -118,6 +132,23 @@ export function KnowledgeGraph({ initialSettings }: { initialSettings: GraphSett
         <span className="text-caption text-muted">
           {docCount} doc{docCount === 1 ? "" : "s"} · {graph.edges.length} links
         </span>
+        {shapes.map((shape) => (
+          <span key={shape.kind} className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className={cn(
+                "size-2 shrink-0",
+                shape.kind === "process" && "rounded-[2px] bg-gray-9",
+                shape.kind === "doc" && "rounded-full bg-gray-9",
+                shape.kind === "connector" && "rounded-full border-[1.5px] border-gray-9",
+              )}
+            />
+            <span className="text-caption text-muted">{shape.label}</span>
+          </span>
+        ))}
+        {legend.length > 0 && (
+          <span aria-hidden="true" className="h-3 w-px shrink-0 bg-gray-5" />
+        )}
         {legend.map((entry) => (
           <span key={entry.label} className="flex items-center gap-1.5">
             <span
