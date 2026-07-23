@@ -4,8 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
 import { ChevronRightIcon, PanelLeftIcon } from "@/components/icons";
-import { ProcessStatusToggle } from "@/components/process-status-toggle";
-import { ProcessVersionMenu } from "@/components/process-version-menu";
 import { cn, focusRing } from "@/lib/cn";
 import { getDoc, getProcess, knowledgeFolders } from "@/lib/mock-data";
 import { useSidebar } from "./sidebar-provider";
@@ -49,9 +47,6 @@ export function TopBar() {
   const pathname = usePathname();
   const { open, toggleNav } = useSidebar();
   const crumbs = crumbsFor(pathname);
-
-  const [, section, slug] = pathname.split("/");
-  const process = section === "processes" && slug ? getProcess(slug) : undefined;
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2">
@@ -97,21 +92,6 @@ export function TopBar() {
           );
         })}
       </nav>
-      {process && (
-        <div className="flex shrink-0 items-center gap-3 pl-2">
-          <ProcessStatusToggle key={`status-${slug}`} initialActive={process.status === "active"} />
-          <ProcessVersionMenu key={`versions-${slug}`} versions={process.versions} />
-          <button
-            type="button"
-            className={cn(
-              "flex h-7 shrink-0 items-center rounded-full border border-border px-3 text-button text-gray-12 transition-colors duration-100 hover:bg-gray-2 motion-reduce:transition-none",
-              focusRing,
-            )}
-          >
-            Share
-          </button>
-        </div>
-      )}
     </div>
   );
 }

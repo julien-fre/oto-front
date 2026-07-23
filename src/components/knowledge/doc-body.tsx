@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import { CircleAlertIcon } from "@/components/icons";
+import { ToolReference } from "@/components/tool-reference";
 import { cn } from "@/lib/cn";
 import { headingId } from "@/lib/doc-outline";
 import type { Block, Span } from "@/lib/mock-data";
@@ -27,13 +28,7 @@ function renderSpan(span: Span) {
   if ("ref" in span) return <DocReference slug={span.ref} />;
   if ("strong" in span) return <strong className="font-medium text-gray-12">{span.strong}</strong>;
   if ("em" in span) return <em className="italic">{span.em}</em>;
-  if ("code" in span) {
-    return (
-      <code className="rounded-sm bg-gray-3 px-1 py-0.5 font-mono text-caption text-gray-12">
-        {span.code}
-      </code>
-    );
-  }
+  if ("code" in span) return <ToolReference tool={span.code} />;
   return (
     <a
       href={span.link.href}
@@ -48,25 +43,25 @@ function BlockView({ block }: { block: Block }) {
   switch (block.type) {
     case "h2":
       return (
-        <h2 id={headingId(block.text)} className="mt-8 scroll-mt-6 text-body-medium text-gray-12">
+        <h2 id={headingId(block.text)} className="mt-8 first:mt-0 scroll-mt-6 text-body-medium text-gray-12">
           {block.text}
         </h2>
       );
     case "h3":
       return (
-        <h3 id={headingId(block.text)} className="mt-6 scroll-mt-6 text-body-medium text-gray-12">
+        <h3 id={headingId(block.text)} className="mt-6 first:mt-0 scroll-mt-6 text-body-medium text-gray-12">
           {block.text}
         </h3>
       );
     case "p":
       return (
-        <p className="mt-3 text-prose text-gray-12">
+        <p className="mt-3 first:mt-0 text-prose text-gray-12">
           <DocSpans spans={block.spans} />
         </p>
       );
     case "ul":
       return (
-        <ul className="mt-3 flex flex-col gap-1">
+        <ul className="mt-3 first:mt-0 flex flex-col gap-1">
           {block.items.map((item, i) => (
             <li key={i} className="flex gap-2 text-prose text-gray-12">
               <span aria-hidden="true" className="shrink-0 text-gray-8">
@@ -81,7 +76,7 @@ function BlockView({ block }: { block: Block }) {
       );
     case "ol":
       return (
-        <ol className="mt-3 flex flex-col gap-1">
+        <ol className="mt-3 first:mt-0 flex flex-col gap-1">
           {block.items.map((item, i) => (
             <li key={i} className="flex gap-2 text-prose text-gray-12">
               <span aria-hidden="true" className="w-3 shrink-0 tabular-nums text-muted">
@@ -96,7 +91,7 @@ function BlockView({ block }: { block: Block }) {
       );
     case "checklist":
       return (
-        <ul className="mt-3 flex flex-col gap-1">
+        <ul className="mt-3 first:mt-0 flex flex-col gap-1">
           {block.items.map((item, i) => (
             <li key={i} className="flex gap-2 text-prose">
               {/* Presentational, not a real checkbox — this document view is
@@ -133,7 +128,7 @@ function BlockView({ block }: { block: Block }) {
       // Breaks out of the prose column to full width and scrolls on its own —
       // the page body must never scroll sideways because of a wide table.
       return (
-        <div className="mt-4 -mx-2 overflow-x-auto">
+        <div className="mt-4 first:mt-0 -mx-2 overflow-x-auto">
           <table className="w-full min-w-[32rem] border-collapse">
             <thead>
               <tr className="border-y border-gray-5">
@@ -164,7 +159,7 @@ function BlockView({ block }: { block: Block }) {
       );
     case "callout":
       return (
-        <div className="mt-4 flex gap-2 rounded-lg bg-gray-2 p-3">
+        <div className="mt-4 first:mt-0 flex gap-2 rounded-lg bg-gray-2 p-3">
           <span
             className={cn("mt-0.5 shrink-0", block.tone === "warn" ? "text-amber-11" : "text-icon")}
           >
@@ -178,24 +173,24 @@ function BlockView({ block }: { block: Block }) {
       );
     case "code":
       return (
-        <pre className="mt-4 overflow-x-auto rounded-lg bg-gray-2 p-3">
+        <pre className="mt-4 first:mt-0 overflow-x-auto rounded-lg bg-gray-2 p-3">
           <code className="font-mono text-caption text-gray-12">{block.text}</code>
         </pre>
       );
     case "quote":
       return (
-        <blockquote className="mt-4 border-l-2 border-gray-6 pl-3 text-prose text-gray-11">
+        <blockquote className="mt-4 first:mt-0 border-l-2 border-gray-6 pl-3 text-prose text-gray-11">
           <DocSpans spans={block.spans} />
         </blockquote>
       );
     case "divider":
-      return <hr className="mt-6 border-t border-border" />;
+      return <hr className="mt-6 first:mt-0 border-t border-border" />;
   }
 }
 
 export function DocBody({ blocks }: { blocks: Block[] }) {
   return (
-    <div className="mt-2">
+    <div>
       {blocks.map((block, i) => (
         <BlockView key={i} block={block} />
       ))}

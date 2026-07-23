@@ -25,13 +25,6 @@ export function Toggle({
       )}
     >
       <span
-        aria-hidden="true"
-        className={cn(
-          "absolute -inset-2 -z-10 rounded-full bg-green-9/40 blur-md transition-opacity duration-150 motion-reduce:transition-none",
-          checked ? "opacity-100" : "opacity-0",
-        )}
-      />
-      <span
         className={cn(
           "inline-block size-4 rounded-full bg-background transition-transform",
           checked ? "translate-x-4" : "translate-x-0.5",

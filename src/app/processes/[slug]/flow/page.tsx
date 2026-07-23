@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { ConnectorLogo } from "@/components/connector-logo";
-import { getConnector, getProcess, getSkill } from "@/lib/mock-data";
+import { getProcess, getSkill, orderedConnectorsForProcess } from "@/lib/mock-data";
 
 export async function generateMetadata({ params }: PageProps<"/processes/[slug]">) {
   const { slug } = await params;
@@ -44,9 +44,7 @@ export default async function ProcessFlowPage({ params }: PageProps<"/processes/
   const process = getProcess(slug);
   if (!process) notFound();
   const processSkills = process.skillIds.map(getSkill).filter((s) => s !== undefined);
-  const processConnectors = process.connectorIds
-    .map(getConnector)
-    .filter((c) => c !== undefined);
+  const processConnectors = orderedConnectorsForProcess(process);
 
   return (
     <ol className="max-w-prose">
