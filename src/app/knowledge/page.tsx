@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { GitForkIcon, ListIcon } from "@/components/icons";
+import { GraphIcon, ListIcon } from "@/components/icons";
 import { KnowledgeGraph } from "@/components/knowledge/knowledge-graph";
 import { KnowledgeList } from "@/components/knowledge/knowledge-list";
 import { cn, focusRing } from "@/lib/cn";
@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Knowledge" };
 
 const VIEWS = [
   { key: "list", label: "List", icon: <ListIcon /> },
-  { key: "graph", label: "Graph", icon: <GitForkIcon /> },
+  { key: "graph", label: "Graph", icon: <GraphIcon /> },
 ] as const;
 
 export default async function KnowledgePage({ searchParams }: PageProps<"/knowledge">) {

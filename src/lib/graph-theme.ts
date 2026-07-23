@@ -14,8 +14,14 @@ export type GraphTheme = {
   muted: string;
   faint: string;
   stale: string;
+  // A concrete font family. Canvas `ctx.font` does not evaluate var(), so the
+  // page's `--font-inter` has to be resolved to its real family name here, or
+  // both the drawn labels and measureText silently fall back to a default font.
+  fontFamily: string;
   forced: boolean;
 };
+
+const FONT_FALLBACK = "ui-sans-serif, system-ui, sans-serif";
 
 const FALLBACK: GraphTheme = {
   background: "#ffffff",
@@ -26,6 +32,7 @@ const FALLBACK: GraphTheme = {
   muted: "#8b8d98", // gray-9
   faint: "#b9bbc6", // gray-8
   stale: FRESHNESS_RING,
+  fontFamily: FONT_FALLBACK,
   forced: false,
 };
 
@@ -50,11 +57,13 @@ export function readGraphTheme(): GraphTheme {
       muted: "GrayText",
       faint: "GrayText",
       stale: "CanvasText",
+      fontFamily: FONT_FALLBACK,
       forced: true,
     };
   }
 
   const styles = getComputedStyle(document.documentElement);
+  const inter = read(styles, "--font-inter", "").replace(/["']/g, "");
   return {
     background: read(styles, "--background", FALLBACK.background),
     link: read(styles, "--gray-5", FALLBACK.link),
@@ -64,6 +73,7 @@ export function readGraphTheme(): GraphTheme {
     muted: read(styles, "--gray-9", FALLBACK.muted),
     faint: read(styles, "--gray-8", FALLBACK.faint),
     stale: read(styles, "--amber-9", FALLBACK.stale),
+    fontFamily: inter ? `${inter}, ${FONT_FALLBACK}` : FONT_FALLBACK,
     forced: false,
   };
 }
