@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { Fragment } from "react";
 import { ChevronRightIcon, PanelLeftIcon } from "@/components/icons";
 import { ProcessStatusToggle } from "@/components/process-status-toggle";
-import { ProcessVersionMenu } from "@/components/process-version-menu";
 import { cn, focusRing } from "@/lib/cn";
 import { getDoc, getProcess, knowledgeFolders } from "@/lib/mock-data";
 import { useSidebar } from "./sidebar-provider";
@@ -100,7 +99,6 @@ export function TopBar() {
       {process && (
         <div className="flex shrink-0 items-center gap-3 pl-2">
           <ProcessStatusToggle key={`status-${slug}`} initialActive={process.status === "active"} />
-          <ProcessVersionMenu key={`versions-${slug}`} versions={process.versions} />
           <button
             type="button"
             className={cn(

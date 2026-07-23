@@ -21,20 +21,14 @@ export default async function ProcessOverviewPage({ params }: PageProps<"/proces
     <div className="flex flex-col gap-8 shell:flex-row">
       <div className="flex min-w-0 flex-1 flex-col gap-8">
         <p className="max-w-prose text-body text-gray-11">{process.description}</p>
-        <section>
-          <h2 className="text-body-medium text-gray-12">Outputs</h2>
-          <p className="mt-1 text-caption text-muted">{process.outputs.join(", ")}</p>
-        </section>
       </div>
 
       <aside className="w-full shrink-0 rounded-xl bg-gray-2 p-4 shell:w-72">
         <div className="flex flex-col gap-5">
-          <PanelSection title="Version">
-            <div className="flex items-center justify-between">
-              <span className="text-body-medium text-gray-12">V{currentVersion.version}</span>
-              <span className="text-caption text-muted">{currentVersion.createdAt}</span>
-            </div>
-          </PanelSection>
+          <div className="flex items-center justify-between">
+            <span className="text-body-medium text-gray-12">Version {currentVersion.version}</span>
+            <span className="text-caption text-muted">{currentVersion.createdAt}</span>
+          </div>
 
           <PanelSection title="Skills">
             <ul className="flex flex-wrap gap-2">
