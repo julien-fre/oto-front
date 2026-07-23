@@ -167,16 +167,16 @@ export function GraphSettingsPanel({
             />
           </div>
           <ToggleRow
-            label="Processes"
-            hint="The automations that read these docs"
-            checked={settings.filters.showProcesses}
-            onChange={() => setFilters({ showProcesses: !settings.filters.showProcesses })}
+            label="Notes"
+            hint="Pages written by agents"
+            checked={settings.filters.showNotes}
+            onChange={() => setFilters({ showNotes: !settings.filters.showNotes })}
           />
           <ToggleRow
-            label="Connectors"
-            hint="Tools the processes call"
-            checked={settings.filters.showConnectors}
-            onChange={() => setFilters({ showConnectors: !settings.filters.showConnectors })}
+            label="Sources"
+            hint="Imported material"
+            checked={settings.filters.showSources}
+            onChange={() => setFilters({ showSources: !settings.filters.showSources })}
           />
           <ToggleRow
             label="Orphans"

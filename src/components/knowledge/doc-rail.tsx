@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { GraphIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
 import { DOC_RAIL_COOKIE, writeGraphCookie } from "@/lib/graph-settings";
+import type { KnowledgeBase } from "@/lib/knowledge-api";
 import { LocalGraph } from "./local-graph";
 
 // The document's context rail, holding exactly one thing: the local graph.
@@ -12,7 +13,7 @@ import { LocalGraph } from "./local-graph";
 // in the property block.) The toggle wears the graph icon in both states,
 // because that is what the button shows and hides.
 
-export function DocRail({ slug, defaultOpen }: { slug: string; defaultOpen: boolean }) {
+export function DocRail({ kb, docId, defaultOpen }: { kb: KnowledgeBase; docId: number; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
 
   useEffect(() => {
@@ -70,7 +71,7 @@ export function DocRail({ slug, defaultOpen }: { slug: string; defaultOpen: bool
         </button>
       </div>
 
-      <LocalGraph slug={slug} />
+      <LocalGraph kb={kb} docId={docId} />
     </aside>
   );
 }

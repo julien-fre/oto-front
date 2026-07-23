@@ -7,76 +7,75 @@ import {
   freshnessLabel,
   freshnessTextClassName,
 } from "@/lib/doc-freshness";
-import { knowledgeFolders, type Doc } from "@/lib/mock-data";
+import { formatDocDate, type KnowledgeDoc } from "@/lib/knowledge-api";
+
+const KIND_LABELS: Record<KnowledgeDoc["kind"], string> = {
+  doc: "Doc",
+  note: "Note — written by an agent",
+  source: "Source — imported material",
+};
 
 /**
  * The key-value block under a document's title, following Notion's shape: a
- * compact list of properties, with the less-load-bearing ones folded behind a
+ * compact list of properties, the less-load-bearing ones folded behind a
  * "Show N more" disclosure.
  *
- * The metadata triad (owner, verified date, source of truth) is always
- * visible, because it is the thing that makes a doc trustworthy to act on —
- * everything else can hide.
+ * Every row is backed by a real backend field (capabilities/docs.py _view) —
+ * the mock era's Owner and Source-of-truth rows died with the wiring, per the
+ * "no backend field → remove, don't fake" precedent (PR #13).
  */
 export function DocProperties({
   doc,
   backlinks,
-  readers,
+  outgoing,
 }: {
-  doc: Doc;
+  doc: KnowledgeDoc;
   backlinks: number;
-  readers: number;
+  outgoing: number;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const folder = knowledgeFolders.find((f) => f.id === doc.category);
 
-  const hidden = [
-    { key: "Folder", value: folder?.label ?? doc.category },
+  const hidden: { key: string; value: React.ReactNode }[] = [
+    { key: "Kind", value: KIND_LABELS[doc.kind] },
+    { key: "Created", value: formatDocDate(doc.createdAt) },
     {
       key: "Links",
-      value: `${backlinks} in · ${doc.links.length} out${
-        readers > 0 ? ` · ${readers} process${readers === 1 ? "" : "es"}` : ""
-      }`,
+      value: `${backlinks} in · ${outgoing} out`,
     },
   ];
+  if (doc.isPublic && doc.publicUrl) {
+    hidden.push({
+      key: "Public link",
+      value: (
+        <a
+          href={doc.publicUrl}
+          target="_blank"
+          rel="noreferrer"
+          className={cn(
+            "text-gray-11 underline decoration-gray-7 underline-offset-2 hover:text-gray-12",
+            focusRing,
+          )}
+        >
+          {doc.publicUrl.replace(/^https?:\/\//, "")}
+        </a>
+      ),
+    });
+  }
 
   return (
     <dl className="flex flex-col">
-      <Row label="Owner">
-        <span className="text-caption text-gray-12">{doc.owner}</span>
-      </Row>
-
-      <Row label="Verified">
+      <Row label="Updated">
         <span className="flex items-center gap-1.5">
           <span
             className={cn("size-1.5 shrink-0 rounded-full", freshnessDotClassName[doc.freshness])}
             aria-hidden="true"
           />
           <span className={cn("text-caption", freshnessTextClassName[doc.freshness])}>
-            {doc.verifiedAt}
-            {doc.freshness !== "fresh" && ` · ${freshnessLabel[doc.freshness]}`}
+            {formatDocDate(doc.updatedAt)}
+            {doc.freshness === "stale" && ` · ${freshnessLabel.stale}`}
           </span>
-          {/* Designed, deliberately inert: there is no back end to record a
-              review against yet. */}
-          <button
-            type="button"
-            disabled
-            title="Connect the back end to record a review"
-            className={cn(
-              "ml-1 h-5 rounded-full px-2 text-caption text-muted disabled:cursor-not-allowed disabled:opacity-60",
-              focusRing,
-            )}
-          >
-            Mark reviewed
-          </button>
         </span>
       </Row>
-
-      {doc.sourceOfTruth && (
-        <Row label="Source of truth">
-          <span className="text-caption text-gray-12">{doc.sourceOfTruth}</span>
-        </Row>
-      )}
 
       {expanded &&
         hidden.map((item) => (
@@ -95,7 +94,7 @@ export function DocProperties({
             focusRing,
           )}
         >
-          {expanded ? "Hide properties" : `Show ${hidden.length} more properties`}
+          {expanded ? "Hide properties" : `Show ${hidden.length} more propert${hidden.length === 1 ? "y" : "ies"}`}
         </button>
       </div>
     </dl>

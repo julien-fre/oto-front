@@ -90,13 +90,6 @@ export function FileTextIcon(props: IconProps) {
   );
 }
 
-export function FolderIcon(props: IconProps) {
-  return (
-    <IconBase {...props}>
-      <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
-    </IconBase>
-  );
-}
 
 // Composite leading visual for nested items: a neutral folder/cog with a
 // per-item color dot badge (like an IDE's colored folder icons). The icon

@@ -5,16 +5,16 @@ import type { GraphNode } from "@/lib/knowledge-graph";
 
 const KIND_LABELS: Record<GraphNode["kind"], string> = {
   doc: "Doc",
-  process: "Process",
-  connector: "Connector",
+  note: "Note",
+  source: "Source",
   unresolved: "Not created yet",
 };
 
 /**
  * The card that follows the cursor over a graph node. Obsidian gates its
  * equivalent behind Cmd/Ctrl-hover; ours shows on plain hover because the card
- * is a four-line summary rather than a 450x400 page preview, and because
- * needing a modifier to identify a dot is a poor trade in a small graph.
+ * is a four-line summary rather than a page preview, and needing a modifier to
+ * identify a dot is a poor trade in a small graph.
  */
 export function NodePreview({ node, x, y }: { node: GraphNode; x: number; y: number }) {
   return (
@@ -32,14 +32,10 @@ export function NodePreview({ node, x, y }: { node: GraphNode; x: number; y: num
         <p className="mt-1 line-clamp-2 text-caption text-muted">{node.excerpt}</p>
       )}
       <p className="mt-2 flex items-center gap-2 text-caption text-muted">
-        {node.owner && <span className="truncate">{node.owner}</span>}
         {node.freshness && (
-          <>
-            {node.owner && <span aria-hidden="true">·</span>}
-            <span className={freshnessTextClassName[node.freshness]}>
-              {freshnessLabel[node.freshness]}
-            </span>
-          </>
+          <span className={freshnessTextClassName[node.freshness]}>
+            {freshnessLabel[node.freshness]}
+          </span>
         )}
         <span className="ml-auto shrink-0">
           {node.degree} link{node.degree === 1 ? "" : "s"}

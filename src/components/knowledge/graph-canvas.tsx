@@ -23,7 +23,6 @@ import {
   type Graph,
   type GraphNode,
 } from "@/lib/knowledge-graph";
-import { LABEL_DOT_COLORS } from "@/lib/mock-data";
 
 export type DisplaySettings = {
   arrows: boolean;
@@ -36,7 +35,9 @@ export type DisplaySettings = {
 
 export const DEFAULT_DISPLAY: DisplaySettings = {
   arrows: false,
-  edgeLabels: true,
+  // Off by default since the live graph has a single edge kind — "references"
+  // on every hovered edge is noise; the toggle stays for when types return.
+  edgeLabels: false,
   textFade: 0,
   nodeSize: 1,
   linkThickness: 1,
@@ -365,19 +366,17 @@ export function GraphCanvas({
       const isFocused = node.id === focused;
 
       ctx.globalAlpha = node.kind === "unresolved" ? alpha * 0.5 : alpha;
-      ctx.fillStyle = isHovered
-        ? theme.ink
-        : nodeColor(node, colorByRef.current, LABEL_DOT_COLORS);
+      ctx.fillStyle = isHovered ? theme.ink : nodeColor(node, colorByRef.current);
 
       // Shape carries the node's kind, so type is never encoded by colour
-      // alone: a filled circle is a doc, a rounded square a process, a ring a
-      // connector.
+      // alone: a filled circle is a doc (human page), a rounded square a note
+      // (agent-written), a ring a source (imported material).
       ctx.beginPath();
-      if (node.kind === "process") {
+      if (node.kind === "note") {
         const s = r * 0.9;
         ctx.roundRect(p.x - s, p.y - s, s * 2, s * 2, s * 0.4);
         ctx.fill();
-      } else if (node.kind === "connector") {
+      } else if (node.kind === "source") {
         ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
         ctx.lineWidth = Math.max(1.5 / t.k, r * 0.28);
         ctx.strokeStyle = ctx.fillStyle;

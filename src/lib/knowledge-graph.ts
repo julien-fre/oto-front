@@ -1,24 +1,18 @@
-// Turns the mock corpus into a node/edge graph. Pure: no React, no DOM, no
-// randomness — the same filters always produce the same graph, which is what
-// lets the canvas cache node positions across navigations.
+// Turns the live knowledge base into a node/edge graph. Pure: no fetching, no
+// randomness — the same KB and filters always produce the same graph, which is
+// what lets the canvas cache node positions across navigations.
 //
-// Node ids are namespaced ("doc:glossary") because a doc slug and a process
-// slug could collide, and because the renderer needs to know a node's kind
-// without a lookup.
+// Nodes are the KB's pages (kind doc | note | source) plus one phantom node
+// per unresolved [[wikilink]] title — the backend's "lien-souche" concept
+// (db/backlinks.py: an unmatched title is rendered UI-side, never stored).
+// Edges are the resolved wikilinks, the same ones the backend keeps in
+// doc_links.
 
-import {
-  connectors,
-  docs,
-  getConnector,
-  getDoc,
-  knowledgeFolders,
-  processes,
-  team,
-  type Doc,
-} from "./mock-data";
+import { docAccentColor, type KnowledgeBase, type KnowledgeDoc } from "./knowledge-model";
+import { normalizeTitle } from "./markdown";
 
-export type NodeKind = "doc" | "process" | "connector" | "unresolved";
-export type EdgeKind = "references" | "reads" | "uses";
+export type NodeKind = "doc" | "note" | "source" | "unresolved";
+export type EdgeKind = "references";
 
 export type GraphNode = {
   id: string;
@@ -27,9 +21,9 @@ export type GraphNode = {
   href: string | null; // null for unresolved — there is nothing to open
   /** Incoming + outgoing, counting a mutual pair twice, the way Obsidian does. */
   degree: number;
-  category?: Doc["category"];
-  owner?: string;
-  freshness?: Doc["freshness"];
+  /** Top-level ancestor doc — the branch of the tree this page lives under. */
+  branchId?: number;
+  freshness?: KnowledgeDoc["freshness"];
   excerpt?: string;
   /** Hops from the center node. Only set by localGraph(). */
   ring?: number;
@@ -40,53 +34,40 @@ export type Graph = { nodes: GraphNode[]; edges: GraphEdge[] };
 
 export const EDGE_LABELS: Record<EdgeKind, string> = {
   references: "references",
-  reads: "reads",
-  uses: "uses",
 };
 
-export const docNodeId = (slug: string) => `doc:${slug}`;
-export const processNodeId = (slug: string) => `process:${slug}`;
-export const connectorNodeId = (id: string) => `connector:${id}`;
-export const unresolvedNodeId = (slug: string) => `unresolved:${slug}`;
+export const docNodeId = (id: number) => `doc:${id}`;
+export const unresolvedNodeId = (title: string) => `unresolved:${normalizeTitle(title)}`;
 
 // ── Color ────────────────────────────────────────────────────────────────────
-// Obsidian encodes node type purely by fill color. We deliberately don't: the
-// renderer also varies shape per kind (WCAG 1.4.1, and the design system's own
-// "pair color with an icon or text label, never color alone"). Color here is
-// the second signal, chosen by the dimension the user picked.
+// Node *type* is carried by shape (circle/square/ring — see graph-canvas), so
+// color is free to carry a second dimension, picked by the user.
 
-export type ColorBy = "folder" | "type" | "owner" | "freshness" | "none";
+export type ColorBy = "branch" | "type" | "freshness" | "none";
 
 export const COLOR_BY_LABELS: Record<ColorBy, string> = {
-  folder: "Folder",
+  branch: "Branch",
   type: "Type",
-  owner: "Owner",
   freshness: "Freshness",
   none: "None",
 };
 
-// Pulled from the design system rather than re-declared: label-dots for
-// identity dimensions, the chromatic scale for freshness (which is state, and
-// so is the one dimension allowed to carry meaning in its hue).
 const NEUTRAL = "#8b8d98"; // gray-9
 const TYPE_COLORS: Record<NodeKind, string> = {
   doc: "#3e63dd", // indigo
-  process: "#0d9488", // teal
-  connector: "#8b8d98", // gray-9
+  note: "#0d9488", // teal
+  source: "#8b8d98", // gray-9
   unresolved: "#b9bbc6", // gray-8
 };
-const FRESHNESS_COLORS: Record<Doc["freshness"], string> = {
+// Freshness is state, so it is the one dimension allowed to speak in
+// chromatic color: green = maintained, amber = past the lint horizon
+// (a warning, not an error — red stays reserved).
+const FRESHNESS_COLORS: Record<KnowledgeDoc["freshness"], string> = {
   fresh: "#30a46c", // green-9
-  aging: "#ffc53d", // amber-9
-  stale: "#e5484d", // red-9
+  stale: "#ffc53d", // amber-9
 };
 
-/**
- * The identity color for a node under the current "Color by" dimension.
- * Folder is the default because it maps onto the three folder dots the sidebar
- * already shows, so a cluster in the graph is recognizable from the nav.
- */
-export function nodeColor(node: GraphNode, colorBy: ColorBy, palette: readonly string[]): string {
+export function nodeColor(node: GraphNode, colorBy: ColorBy): string {
   if (node.kind === "unresolved") return TYPE_COLORS.unresolved;
   switch (colorBy) {
     case "none":
@@ -95,42 +76,32 @@ export function nodeColor(node: GraphNode, colorBy: ColorBy, palette: readonly s
       return TYPE_COLORS[node.kind];
     case "freshness":
       return node.freshness ? FRESHNESS_COLORS[node.freshness] : NEUTRAL;
-    case "owner": {
-      const i = team.indexOf(node.owner as (typeof team)[number]);
-      return i < 0 ? NEUTRAL : palette[i % palette.length];
-    }
-    case "folder": {
-      if (!node.category) return TYPE_COLORS[node.kind];
-      const i = knowledgeFolders.findIndex((f) => f.id === node.category);
-      return palette[Math.max(0, i) % palette.length];
-    }
+    case "branch":
+      return node.branchId != null ? docAccentColor(node.branchId) : NEUTRAL;
   }
 }
 
-/** The legend entries for a dimension, so the graph never relies on color alone. */
-export function colorLegend(
-  colorBy: ColorBy,
-  palette: readonly string[],
-): { label: string; color: string }[] {
+/** Legend entries for a dimension, so the graph never speaks in color alone. */
+export function colorLegend(colorBy: ColorBy, kb: KnowledgeBase): { label: string; color: string }[] {
   switch (colorBy) {
     case "none":
       return [];
     case "type":
       return [
         { label: "Doc", color: TYPE_COLORS.doc },
-        { label: "Process", color: TYPE_COLORS.process },
-        { label: "Connector", color: TYPE_COLORS.connector },
+        { label: "Note", color: TYPE_COLORS.note },
+        { label: "Source", color: TYPE_COLORS.source },
       ];
     case "freshness":
       return [
-        { label: "Verified", color: FRESHNESS_COLORS.fresh },
-        { label: "Review soon", color: FRESHNESS_COLORS.aging },
+        { label: "Up to date", color: FRESHNESS_COLORS.fresh },
         { label: "Needs review", color: FRESHNESS_COLORS.stale },
       ];
-    case "owner":
-      return team.map((person, i) => ({ label: person, color: palette[i % palette.length] }));
-    case "folder":
-      return knowledgeFolders.map((f, i) => ({ label: f.label, color: palette[i % palette.length] }));
+    case "branch":
+      return (kb.children.get(null) ?? []).map((doc) => ({
+        label: doc.title,
+        color: docAccentColor(doc.id),
+      }));
   }
 }
 
@@ -138,96 +109,55 @@ export function colorLegend(
 
 export type GraphFilters = {
   query: string;
-  showProcesses: boolean;
-  showConnectors: boolean;
+  /** Agent-written pages (kind=note). */
+  showNotes: boolean;
+  /** Imported material (kind=source). */
+  showSources: boolean;
   showOrphans: boolean;
-  /** Obsidian's inverted "Existing files only": on = hide unresolved links. */
+  /** On = hide unresolved [[wikilinks]] (Obsidian's inverted naming, kept). */
   hideUnresolved: boolean;
 };
 
 export const DEFAULT_FILTERS: GraphFilters = {
   query: "",
-  showProcesses: true,
-  showConnectors: false,
+  showNotes: true,
+  showSources: true,
   showOrphans: true,
   hideUnresolved: false,
 };
 
-function makeDocNode(doc: Doc): GraphNode {
+function makeDocNode(doc: KnowledgeDoc, kb: KnowledgeBase): GraphNode {
   return {
-    id: docNodeId(doc.slug),
-    kind: "doc",
-    label: doc.title,
-    href: `/knowledge/${doc.slug}`,
+    id: docNodeId(doc.id),
+    kind: doc.kind,
+    label: doc.title || `Untitled ${doc.id}`,
+    href: `/knowledge/${doc.id}`,
     degree: 0,
-    category: doc.category,
-    owner: doc.owner,
+    branchId: kb.branchOf.get(doc.id) ?? doc.id,
     freshness: doc.freshness,
-    excerpt: doc.excerpt,
+    excerpt: doc.summary,
   };
 }
 
-/** Every node and edge the corpus can produce, before any filtering. */
-function fullGraph(): Graph {
-  const nodes: GraphNode[] = docs.map(makeDocNode);
+/** Every node and edge the KB can produce, before any filtering. */
+function fullGraph(kb: KnowledgeBase): Graph {
+  const nodes: GraphNode[] = kb.docs.map((doc) => makeDocNode(doc, kb));
   const edges: GraphEdge[] = [];
-  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const seenStubs = new Map<string, GraphNode>();
 
-  // doc → doc, materializing a phantom node for any slug with no doc behind it
-  for (const doc of docs) {
-    for (const target of doc.links) {
-      if (getDoc(target)) {
-        edges.push({ source: docNodeId(doc.slug), target: docNodeId(target), kind: "references" });
-        continue;
-      }
-      const id = unresolvedNodeId(target);
-      if (!byId.has(id)) {
-        const node: GraphNode = { id, kind: "unresolved", label: target, href: null, degree: 0 };
-        byId.set(id, node);
+  for (const doc of kb.docs) {
+    for (const target of kb.outgoing.get(doc.id) ?? []) {
+      edges.push({ source: docNodeId(doc.id), target: docNodeId(target), kind: "references" });
+    }
+    for (const title of kb.stubs.get(doc.id) ?? []) {
+      const id = unresolvedNodeId(title);
+      let node = seenStubs.get(id);
+      if (!node) {
+        node = { id, kind: "unresolved", label: title, href: null, degree: 0 };
+        seenStubs.set(id, node);
         nodes.push(node);
       }
-      edges.push({ source: docNodeId(doc.slug), target: id, kind: "references" });
-    }
-  }
-
-  const live = processes.filter((p) => p.status !== "deprecated");
-  for (const process of live) {
-    nodes.push({
-      id: processNodeId(process.slug),
-      kind: "process",
-      label: process.name,
-      href: `/processes/${process.slug}`,
-      degree: 0,
-      owner: process.owner,
-      excerpt: process.description,
-    });
-    for (const slug of process.docSlugs) {
-      if (getDoc(slug)) {
-        edges.push({ source: processNodeId(process.slug), target: docNodeId(slug), kind: "reads" });
-      }
-    }
-  }
-
-  // Only connectors a live process actually uses — the registry has ~55, and
-  // dropping in all of them would swamp the graph with unconnected nodes.
-  const used = new Set(live.flatMap((p) => p.connectorIds));
-  for (const connector of connectors) {
-    if (!used.has(connector.id)) continue;
-    nodes.push({
-      id: connectorNodeId(connector.id),
-      kind: "connector",
-      label: connector.name,
-      href: "/connectors",
-      degree: 0,
-      owner: connector.owner,
-      excerpt: connector.description,
-    });
-  }
-  for (const process of live) {
-    for (const id of process.connectorIds) {
-      if (getConnector(id)) {
-        edges.push({ source: processNodeId(process.slug), target: connectorNodeId(id), kind: "uses" });
-      }
+      edges.push({ source: docNodeId(doc.id), target: id, kind: "references" });
     }
   }
 
@@ -257,22 +187,22 @@ function settle(nodes: GraphNode[], edges: GraphEdge[]): Graph {
   };
 }
 
-export function buildGraph(filters: GraphFilters): Graph {
-  const { nodes: all, edges: allEdges } = fullGraph();
+export function buildGraph(kb: KnowledgeBase, filters: GraphFilters): Graph {
+  const { nodes: all, edges: allEdges } = fullGraph(kb);
   const needle = filters.query.trim().toLowerCase();
 
   let nodes = all.filter((n) => {
-    if (n.kind === "process" && !filters.showProcesses) return false;
-    if (n.kind === "connector" && !filters.showConnectors) return false;
+    if (n.kind === "note" && !filters.showNotes) return false;
+    if (n.kind === "source" && !filters.showSources) return false;
     if (n.kind === "unresolved" && filters.hideUnresolved) return false;
     return matchesQuery(n, needle);
   });
 
   let graph = settle(nodes, allEdges);
 
-  // Orphan status is computed AFTER every other filter — Obsidian's rule, and
-  // the reason the toggle feels alive: a doc whose neighbors were filtered out
-  // is an orphan "in the context of the filtered search" and disappears too.
+  // Orphan status is computed AFTER every other filter — Obsidian's rule: a
+  // doc whose neighbors were filtered out is an orphan "in the context of the
+  // filtered search" and disappears too.
   if (!filters.showOrphans) {
     nodes = graph.nodes.filter((n) => n.degree > 0);
     graph = settle(nodes, allEdges);
@@ -289,8 +219,8 @@ export type LocalFilters = {
   outgoing: boolean;
   /** Adds edges among the included set. Never adds nodes. */
   neighborLinks: boolean;
-  showProcesses: boolean;
-  showConnectors: boolean;
+  showNotes: boolean;
+  showSources: boolean;
   hideUnresolved: boolean;
 };
 
@@ -299,33 +229,28 @@ export const DEFAULT_LOCAL_FILTERS: LocalFilters = {
   incoming: true,
   outgoing: true,
   neighborLinks: false,
-  showProcesses: true,
-  showConnectors: false,
+  showNotes: true,
+  showSources: true,
   hideUnresolved: false,
 };
 
 export const MAX_LOCAL_DEPTH = 3;
 
 /**
- * BFS out from one node, following Obsidian's local-graph algorithm.
- *
- * The subtle part, and the thing a naive implementation gets wrong: the
- * direction toggles gate *traversal*, not just which edges get drawn. With
- * incoming off, the walk only ever moves forward along outgoing links — so at
- * depth 3 you get a pure forward cone, not a 3-hop neighborhood with some
- * edges hidden. With both off, nothing is ever added to the frontier and only
- * the center node renders.
+ * BFS out from one node, Obsidian's local-graph algorithm. The direction
+ * toggles gate *traversal*, not just edge rendering; with both off nothing is
+ * ever added to the frontier and only the center renders.
  */
-export function localGraph(centerId: string, filters: LocalFilters): Graph {
-  const { nodes: all, edges: allEdges } = fullGraph();
+export function localGraph(kb: KnowledgeBase, centerId: string, filters: LocalFilters): Graph {
+  const { nodes: all, edges: allEdges } = fullGraph(kb);
   const byId = new Map(all.map((n) => [n.id, n]));
   if (!byId.has(centerId)) return { nodes: [], edges: [] };
 
   const visible = (id: string) => {
     const node = byId.get(id);
     if (!node) return false;
-    if (node.kind === "process" && !filters.showProcesses) return false;
-    if (node.kind === "connector" && !filters.showConnectors) return false;
+    if (node.kind === "note" && !filters.showNotes) return false;
+    if (node.kind === "source" && !filters.showSources) return false;
     if (node.kind === "unresolved" && filters.hideUnresolved) return false;
     return true;
   };
@@ -333,16 +258,12 @@ export function localGraph(centerId: string, filters: LocalFilters): Graph {
   const edges = allEdges.filter((e) => visible(e.source) && visible(e.target));
 
   const ring = new Map<string, number>([[centerId, 0]]);
-  // The edges actually walked. With neighbor links off these are the only ones
-  // drawn — each included node keeps its *pruned* adjacency, which is why a
-  // local graph normally reads as a tree rather than a mesh.
+  // The edges actually walked — with neighbor links off, only these draw, so
+  // a local graph reads as a tree rather than a mesh.
   const walked: GraphEdge[] = [];
   for (let hop = 0; hop < filters.depth; hop++) {
     const frontier: string[] = [];
     for (const e of edges) {
-      // `ring` is only written after the loop, so both tests see the frontier
-      // as it stood at the start of this hop — nodes added this round do not
-      // pull in their own neighbors until the next one.
       if (filters.outgoing && ring.has(e.source) && !ring.has(e.target)) {
         frontier.push(e.target);
         walked.push(e);
@@ -356,9 +277,6 @@ export function localGraph(centerId: string, filters: LocalFilters): Graph {
   }
 
   const included = new Set(ring.keys());
-  // Neighbor links restores the full adjacency among the included set. An edge
-  // is only drawn when both endpoints are already present, so this adds edges
-  // and never nodes.
   const kept = filters.neighborLinks
     ? edges.filter((e) => included.has(e.source) && included.has(e.target))
     : walked.filter((e) => included.has(e.source) && included.has(e.target));
@@ -381,7 +299,7 @@ export function localGraph(centerId: string, filters: LocalFilters): Graph {
 /**
  * Node weight. The global graph sizes by link count; the local graph sizes by
  * distance from the center, so the doc you are reading is unmistakably the
- * biggest thing on screen (at depth 1 it is >2x every neighbor).
+ * biggest thing on screen.
  */
 export function nodeWeight(node: GraphNode, depth?: number): number {
   if (node.ring === undefined || !depth) return node.degree;

@@ -1,68 +1,14 @@
-// Mock content shared by the sidebar and the placeholder pages until the
-// back end is integrated. The shapes mirror the two real company-OS repos
-// this product replaces (corma-company-os, second-brain), genericized:
-// docs carry owner + verified date + source-of-truth pointers, processes have
-// a lifecycle and are composed of skills reused across processes,
-// connectors carry Oto's real installation state. Dates are preformatted
-// display strings so server and client can never disagree on locale.
+import type { Block } from "./doc-blocks";
 
-import { knowledgeDocs } from "./knowledge-docs";
+// Mock content for the sections not yet wired to oto-backend (processes and
+// the skills they compose; the Connector shape doubles as the mapped type for
+// the live /api/me/connectors payload). Knowledge left this file when the
+// section went live — docs now come from the org KB via
+// src/lib/knowledge-api.ts. Dates are preformatted display strings so server
+// and client can never disagree on locale.
 
-// Identity colors for nested items — the sidebar marks each doc/process with a
-// colored dot so the sub-sections are visually distinct (differentiation, not
-// decoration). Ordered so consecutive items in a section read as clearly
-// different hues; assigned by position for now, user-assignable later like
-// Notion page colors. Every value clears ~3:1 on the gray-2 sidebar.
-export const LABEL_DOT_COLORS = [
-  "#3e63dd", // indigo
-  "#0d9488", // teal
-  "#c2740a", // amber
-  "#e93d82", // pink
-  "#3d9a50", // grass
-  "#0090ff", // blue
-  "#ef5f00", // orange
-  "#6e56cf", // violet
-  "#ab4aba", // plum
-] as const;
-
-// Document content is a typed block array rather than a markdown string: no
-// parser to maintain, total render control, and it forces the block schema the
-// back end will eventually serve. Inline references carry a slug, not a URL, so
-// a doc that gets renamed never leaves a dead link in prose.
-export type Span =
-  | string
-  | { ref: string } // inline reference to another doc, by slug
-  | { em: string }
-  | { strong: string }
-  | { code: string }
-  | { link: { href: string; label: string } };
-
-export type Block =
-  | { type: "h2" | "h3"; text: string }
-  | { type: "p"; spans: Span[] }
-  | { type: "ul" | "ol"; items: Span[][] }
-  | { type: "checklist"; items: { done: boolean; spans: Span[] }[] }
-  | { type: "table"; head: string[]; rows: Span[][][] }
-  | { type: "callout"; tone: "note" | "warn"; spans: Span[] }
-  | { type: "code"; lang: string; text: string }
-  | { type: "quote"; spans: Span[] }
-  | { type: "divider" };
-
-export type Doc = {
-  slug: string;
-  title: string;
-  category: "company" | "wiki" | "decisions";
-  owner: string;
-  verifiedAt: string;
-  sourceOfTruth?: string;
-  excerpt: string;
-  links: string[]; // slugs of related docs; a slug with no doc is an unresolved link
-  // Stored, never computed from the clock. Dates in this file are preformatted
-  // display strings precisely so server and client cannot disagree — deriving
-  // staleness from Date.now() would reintroduce the hazard it avoids.
-  freshness: "fresh" | "aging" | "stale";
-  body: Block[];
-};
+export { LABEL_DOT_COLORS } from "./label-colors";
+import { LABEL_DOT_COLORS } from "./label-colors";
 
 export type Skill = {
   id: string;
@@ -94,10 +40,6 @@ export type Process = {
   // literally what the procedure calls.
   tools?: string[];
   connectorIds: string[];
-  // The knowledge this process reads before it runs. Together with
-  // connectorIds this is what makes the knowledge graph a picture of the
-  // company rather than of a wiki — see src/lib/knowledge-graph.ts.
-  docSlugs: string[];
   // Most recent run first. Empty for processes that have never run (drafts).
   runs: ProcessRun[];
   // Highest version first — versions[0] is the current one.
@@ -147,10 +89,6 @@ export type Connector = {
   authCardinality?: string;
 };
 
-// The corpus itself lives in its own file purely for size — this stays the
-// single import surface for every consumer.
-export const docs: Doc[] = knowledgeDocs;
-
 export const skills: Skill[] = [
   { id: "pull-crm-records", name: "Pull CRM records", description: "Read companies, contacts, and deals from the CRM." },
   { id: "enrich-contact", name: "Enrich contact details", description: "Waterfall enrichment for emails, phones, and firmographics." },
@@ -189,7 +127,6 @@ export const processes: Process[] = [
       "aiark_credits",
     ],
     connectorIds: ["folk", "aiark", "lemlist"],
-    docSlugs: [],
     runs: [],
     versions: [
       { version: 3, createdAt: "Jul 22, 2026" },
@@ -360,7 +297,6 @@ export const processes: Process[] = [
       "sync-crm",
     ],
     connectorIds: ["hubspot", "lemlist", "slack"],
-    docSlugs: ["icp", "lead-scoring", "enrichment-waterfall", "outreach-playbook", "crm-hygiene", "glossary"],
     runs: [
       { ranAt: "Jul 21, 2026 14:32", durationMinutes: 6, status: "success" },
       { ranAt: "Jul 18, 2026 09:14", durationMinutes: 7, status: "success" },
@@ -381,7 +317,6 @@ export const processes: Process[] = [
     owner: "Julien",
     skillIds: ["extract-call-feedback", "render-report", "post-slack-digest", "file-tickets"],
     connectorIds: ["notion", "slack"],
-    docSlugs: ["feedback-pipeline-runbook", "glossary", "voice-guide"],
     runs: [
       { ranAt: "Jul 20, 2026 09:00", durationMinutes: 12, status: "success" },
       { ranAt: "Jul 13, 2026 09:00", durationMinutes: 11, status: "success" },
@@ -400,7 +335,6 @@ export const processes: Process[] = [
     owner: "Alessandro",
     skillIds: ["collect-hiring-signals", "detect-tech-stack", "draft-outreach", "post-slack-digest"],
     connectorIds: ["hubspot", "lemlist", "slack"],
-    docSlugs: ["competitors", "icp", "outreach-playbook"],
     runs: [
       { ranAt: "Jul 21, 2026 07:00", durationMinutes: 4, status: "success" },
       { ranAt: "Jul 17, 2026 07:00", durationMinutes: 4, status: "success" },
@@ -416,7 +350,6 @@ export const processes: Process[] = [
     owner: "Julien",
     skillIds: ["pull-crm-records", "post-slack-digest"],
     connectorIds: ["zohoanalytics", "hubspot", "slack"],
-    docSlugs: ["glossary", "data-model", "people"],
     runs: [
       { ranAt: "Jul 21, 2026 08:00", durationMinutes: 2, status: "success" },
       { ranAt: "Jul 20, 2026 08:00", durationMinutes: 2, status: "success" },
@@ -435,7 +368,6 @@ export const processes: Process[] = [
     owner: "Alessandro",
     skillIds: ["post-slack-digest"],
     connectorIds: ["notion", "slack"],
-    docSlugs: ["connector-conventions", "agent-runbook", "security-posture"],
     runs: [
       { ranAt: "Jul 21, 2026 08:00", durationMinutes: 3, status: "success" },
       { ranAt: "Jul 20, 2026 08:00", durationMinutes: 3, status: "success" },
@@ -455,7 +387,6 @@ export const processes: Process[] = [
     owner: "Julien",
     skillIds: ["draft-outreach", "post-slack-digest"],
     connectorIds: ["slack"],
-    docSlugs: ["voice-guide", "overview"],
     runs: [],
     versions: [{ version: 1, createdAt: "Jul 19, 2026" }],
   },
@@ -467,7 +398,6 @@ export const processes: Process[] = [
     owner: "Alessandro",
     skillIds: ["pull-crm-records", "sync-crm"],
     connectorIds: ["hubspot"],
-    docSlugs: ["data-model", "reporting-stack"],
     runs: [{ ranAt: "Mar 2, 2026 10:00", durationMinutes: 5, status: "success" }],
     versions: [
       { version: 4, createdAt: "Feb 20, 2026" },
@@ -1321,28 +1251,11 @@ export const connectors: Connector[] = [
   },
 ];
 
-// Knowledge is a tree: the section holds category folders, each holding docs.
-// Folder ids match Doc["category"] so a doc always knows its folder.
-export const knowledgeFolders = [
-  { id: "company", label: "Company" },
-  { id: "wiki", label: "Wiki" },
-  { id: "decisions", label: "Decisions" },
-] as const satisfies readonly { id: Doc["category"]; label: string }[];
-
-export const docsInFolder = (category: Doc["category"]) =>
-  docs.filter((d) => d.category === category);
-
-// Identity color by position in the full list, so a doc keeps its color
-// regardless of which folder it sits in.
-export const docColor = (slug: string) =>
-  LABEL_DOT_COLORS[Math.max(0, docs.findIndex((d) => d.slug === slug)) % LABEL_DOT_COLORS.length];
-
 export const processColor = (slug: string) =>
   LABEL_DOT_COLORS[
     Math.max(0, processes.findIndex((p) => p.slug === slug)) % LABEL_DOT_COLORS.length
   ];
 
-export const getDoc = (slug: string) => docs.find((d) => d.slug === slug);
 export const getProcess = (slug: string) => processes.find((p) => p.slug === slug);
 export const getSkill = (id: string) => skills.find((s) => s.id === id);
 export const getConnector = (id: string) => connectors.find((c) => c.id === id);
@@ -1409,22 +1322,6 @@ export const toolsForConnector = (process: Process, connectorId: string): string
 
 export const connectorUsage = (connectorId: string): Process[] =>
   processes.filter((p) => p.status !== "deprecated" && p.connectorIds.includes(connectorId));
-
-// Which docs point at this one. The Doc shape only stores outgoing links, so
-// backlinks are always a scan — cheap at this size, and it keeps a doc's own
-// record from having to be kept in sync with its referrers.
-export const backlinksFor = (slug: string): Doc[] =>
-  docs.filter((d) => d.slug !== slug && d.links.includes(slug));
-
-// Outgoing links, with slugs that have no doc preserved rather than dropped —
-// those are the unresolved links the graph draws as phantom nodes and the
-// links list marks "Not created yet".
-export const outgoingFor = (slug: string): { slug: string; doc: Doc | undefined }[] =>
-  (getDoc(slug)?.links ?? []).map((target) => ({ slug: target, doc: getDoc(target) }));
-
-// Processes that read this doc before they run.
-export const processesReading = (slug: string): Process[] =>
-  processes.filter((p) => p.status !== "deprecated" && p.docSlugs.includes(slug));
 
 // The only two people in this mock workspace — reused wherever a connector
 // needs an access-grant list, not a magic array inlined at the call site.
