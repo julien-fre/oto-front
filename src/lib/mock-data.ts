@@ -90,6 +90,11 @@ export type Process = {
   owner: string;
   schedule: string | null; // null = manual / on demand
   skillIds: string[];
+  // Real tool identifiers (as they appear in `body`'s code spans), for
+  // processes pulled from an actual doctrine. Takes over from skillIds in
+  // the panel when present — skills are an invented abstraction, this is
+  // literally what the procedure calls.
+  tools?: string[];
   connectorIds: string[];
   // The knowledge this process reads before it runs. Together with
   // connectorIds this is what makes the knowledge graph a picture of the
@@ -100,6 +105,10 @@ export type Process = {
   runs: ProcessRun[];
   // Highest version first — versions[0] is the current one.
   versions: ProcessVersion[];
+  // The full procedure, block by block, for processes that have one written
+  // out (today: only the one pulled from Oto). Optional because most mock
+  // processes here only ever got a one-line description.
+  body?: Block[];
 };
 
 export type Connector = {
@@ -141,6 +150,188 @@ export const skills: Skill[] = [
 ];
 
 export const processes: Process[] = [
+  // Real doctrine pulled from Oto (org "Atlas", oto_procedure slug
+  // "vendor-contact-sourcing", v3) — everything else in this array is
+  // invented. Oto's doctrine model has no schedule or run-history fields,
+  // so those stay null/empty until Oto exposes them.
+  {
+    slug: "vendor-contact-sourcing",
+    name: "Sourcing contacts éditeurs (AI Ark → Folk → Lemlist)",
+    description:
+      "Extrait du groupe Folk « Providers » les entreprises avec un avis mais sans contact lié, trouve leur CEO / Head of Marketing / Head of Branding via AI Ark, les repousse dans Folk sous ce même groupe, puis les pousse vers la campagne Lemlist dédiée à l'outreach vendors.",
+    status: "active",
+    kind: "deliverable",
+    owner: "Julien",
+    schedule: null,
+    skillIds: [],
+    tools: [
+      "mcp__folk-crm__list_companies",
+      "mcp__folk-crm__get_company_context",
+      "aiark_company_search",
+      "aiark_people_search",
+      "mcp__folk-crm__search_people_by_email",
+      "mcp__folk-crm__create_person",
+      "mcp__folk-crm__bulk_add_to_group",
+      "aiark_credits",
+    ],
+    connectorIds: ["folk", "aiark", "lemlist"],
+    docSlugs: [],
+    outputs: ["Folk contacts", "Lemlist campaign"],
+    runs: [],
+    versions: [
+      { version: 3, createdAt: "Jul 22, 2026" },
+      { version: 2, createdAt: "Jul 22, 2026" },
+      { version: 1, createdAt: "Jul 22, 2026" },
+    ],
+    body: [
+      { type: "h2", text: "Contexte" },
+      {
+        type: "p",
+        spans: [
+          "Cette procédure est le sous-bloc « recherche de contacts » du volet éditeurs de la stratégie d'outreach Softatlas (voir page KB « Outreach — Acquisition utilisateurs & éditeurs »). Elle part des entreprises déjà présentes dans Folk (groupe « Providers ») qui ont un avis sur Softatlas mais aucun contact rattaché, et en ressort des contacts qualifiés repoussés dans Folk et Lemlist.",
+        ],
+      },
+      { type: "h2", text: "Rôles ciblés (par entreprise, jusqu'à 3 contacts)" },
+      {
+        type: "ol",
+        items: [
+          [
+            { strong: "CEO / Fondateur" },
+            " — seniority ",
+            { code: "founder" },
+            "/",
+            { code: "owner" },
+            "/",
+            { code: "c_suite" },
+            ", title contient CEO / Chief Executive Officer / Founder.",
+          ],
+          [
+            { strong: "Head of Marketing" },
+            " — department ",
+            { code: "marketing" },
+            ", seniority ",
+            { code: "head" },
+            "/",
+            { code: "director" },
+            "/",
+            { code: "vp" },
+            ".",
+          ],
+          [
+            { strong: "Head of Branding / Brand" },
+            " — title contient brand / branding / brand marketing.",
+          ],
+        ],
+      },
+      { type: "h2", text: "Étapes" },
+      { type: "h3", text: "1. Extraire les entreprises cibles (Folk)" },
+      {
+        type: "p",
+        spans: [
+          "Dans le groupe Folk ",
+          { strong: "« Providers »" },
+          ", lister les entreprises (",
+          { code: "mcp__folk-crm__list_companies" },
+          ", filtré sur ce groupe) puis ne garder que celles qui :",
+        ],
+      },
+      {
+        type: "ul",
+        items: [
+          ["ont un ", { strong: "avis" }, " (review) renseigné sur Softatlas (champ personnalisé avis/reviews) ;"],
+          [
+            { strong: "n'ont aucune personne (contact) rattachée" },
+            " dans Folk (vérifier via ",
+            { code: "mcp__folk-crm__get_company_context" },
+            " — liste des personnes liées vide).",
+          ],
+        ],
+      },
+      {
+        type: "p",
+        spans: ["C'est cette liste filtrée (entreprise + domaine/site) qui alimente les étapes suivantes."],
+      },
+      { type: "h3", text: "2. Rechercher les contacts (AI Ark)" },
+      { type: "p", spans: ["Pour chaque entreprise filtrée à l'étape 1, et pour chaque rôle ciblé :"] },
+      {
+        type: "ul",
+        items: [
+          [
+            { code: "aiark_company_search" },
+            ' avec account: {"domain": {"any": {"include": ["<domaine>"]}}} pour confirmer/normaliser l\'entité si besoin.',
+          ],
+          [
+            { code: "aiark_people_search" },
+            " avec ",
+            { code: "account" },
+            " filtré sur le domaine et ",
+            { code: "contact" },
+            " filtré selon le rôle (cf. section rôles ciblés).",
+          ],
+        ],
+      },
+      {
+        type: "p",
+        spans: ["Garder le meilleur match par rôle (le plus senior / le plus proche du titre recherché)."],
+      },
+      { type: "h3", text: "3. Vérifier les doublons" },
+      {
+        type: "p",
+        spans: [
+          { code: "mcp__folk-crm__search_people_by_email" },
+          " sur chaque contact obtenu — ne pas recréer une fiche Folk existante, la mettre à jour si besoin (poste, entreprise).",
+        ],
+      },
+      { type: "h3", text: "4. Repousser vers Folk, sous le groupe Providers" },
+      {
+        type: "ul",
+        items: [
+          [
+            { code: "mcp__folk-crm__create_person" },
+            " pour chaque nouveau contact (prénom, nom, email, poste), ",
+            { strong: "rattaché à l'entreprise déjà présente dans Folk" },
+            ".",
+          ],
+          [
+            { code: "mcp__folk-crm__bulk_add_to_group" },
+            " pour ajouter ces contacts au ",
+            { strong: "même groupe « Providers »" },
+            " que leur entreprise (pas un groupe séparé) — les contacts apparaissent ainsi directement rattachés à leur fiche entreprise dans ce groupe.",
+          ],
+        ],
+      },
+      { type: "h3", text: "5. Pousser vers Lemlist" },
+      {
+        type: "p",
+        spans: [
+          "Ajouter les contacts (email, prénom, nom, société, poste) à la campagne Lemlist dédiée « Outreach Vendors — Claim & Review ». Si le connecteur Lemlist n'est pas encore activé sur l'org, l'activer d'abord (",
+          { code: "oto_connector" },
+          " op=select, name=lemlist).",
+        ],
+      },
+      { type: "h2", text: "Garde-fous" },
+      {
+        type: "ul",
+        items: [
+          [
+            "Ne traiter que les entreprises du groupe « Providers » ayant un avis ET aucune personne liée — ne pas re-traiter celles qui ont déjà au moins un contact.",
+          ],
+          ["Ne jamais pousser un contact deux fois dans la même campagne Lemlist."],
+          ["Vérifier les crédits disponibles (", { code: "aiark_credits" }, ") avant un run sur un grand nombre d'entreprises."],
+          [
+            "Une entreprise sans contact trouvé pour un rôle donné est journalisée comme « non trouvé », pas bloquant pour les autres rôles.",
+          ],
+        ],
+      },
+      { type: "h2", text: "Sortie attendue" },
+      {
+        type: "p",
+        spans: [
+          "Pour chaque run : nombre d'entreprises traitées (groupe Providers, avis sans contact), contacts trouvés par rôle, contacts créés/mis à jour dans Folk sous le groupe Providers, contacts poussés dans la campagne Lemlist.",
+        ],
+      },
+    ],
+  },
   {
     slug: "lead-list-builder",
     name: "Lead list builder",
@@ -1163,6 +1354,52 @@ export const getDoc = (slug: string) => docs.find((d) => d.slug === slug);
 export const getProcess = (slug: string) => processes.find((p) => p.slug === slug);
 export const getSkill = (id: string) => skills.find((s) => s.id === id);
 export const getConnector = (id: string) => connectors.find((c) => c.id === id);
+
+// Maps a real tool identifier, as it appears verbatim in a doc/process body's
+// `code` spans (e.g. `mcp__folk-crm__create_person`), to the connector that
+// backs it. Explicit rather than pattern-matched on the tool name — MCP
+// namespaces (`folk-crm`) don't always match the connector id (`folk`), and
+// guessing wrong would silently mislink a tool to the wrong logo.
+const TOOL_CONNECTORS: Record<string, string> = {
+  "mcp__folk-crm__list_companies": "folk",
+  "mcp__folk-crm__get_company_context": "folk",
+  "mcp__folk-crm__search_people_by_email": "folk",
+  "mcp__folk-crm__create_person": "folk",
+  "mcp__folk-crm__bulk_add_to_group": "folk",
+  aiark_company_search: "aiark",
+  aiark_people_search: "aiark",
+  aiark_credits: "aiark",
+};
+
+export const getConnectorForTool = (tool: string) => {
+  const connectorId = TOOL_CONNECTORS[tool];
+  return connectorId ? getConnector(connectorId) : undefined;
+};
+
+// Connectors and tools in the order the procedure actually calls them, not
+// the order they happen to be listed in connectorIds/tools — a connector's
+// slot is set by its first tool's position, so the panel always reads as "in
+// order of first use" even if those arrays get reordered independently.
+export const orderedConnectorsForProcess = (process: Process): Connector[] => {
+  const ordered = new Map<string, Connector>();
+  for (const tool of process.tools ?? []) {
+    const connector = getConnectorForTool(tool);
+    if (connector && !ordered.has(connector.id)) ordered.set(connector.id, connector);
+  }
+  // Connectors with no tool tying them to a specific step (e.g. one only
+  // used for a manual/UI action) keep connectorIds' order, after the ones
+  // usage already placed.
+  for (const id of process.connectorIds) {
+    if (!ordered.has(id)) {
+      const connector = getConnector(id);
+      if (connector) ordered.set(id, connector);
+    }
+  }
+  return [...ordered.values()];
+};
+
+export const toolsForConnector = (process: Process, connectorId: string): string[] =>
+  (process.tools ?? []).filter((tool) => getConnectorForTool(tool)?.id === connectorId);
 
 export const connectorUsage = (connectorId: string): Process[] =>
   processes.filter((p) => p.status !== "deprecated" && p.connectorIds.includes(connectorId));

@@ -36,7 +36,7 @@ export default async function DocPage({ params }: PageProps<"/knowledge/[slug]">
             edge. */}
         <div className="mx-auto max-w-[40rem]">
           <DocProperties doc={doc} backlinks={backlinks.length} readers={readers.length} />
-          <p className="mt-6 text-prose text-gray-11">{doc.excerpt}</p>
+          <p className="mt-6 mb-2 text-prose text-gray-11">{doc.excerpt}</p>
           <DocBody blocks={doc.body} />
         </div>
       </div>
