@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAppVersion } from "@/components/shell/version-provider";
 import { cn, focusRing } from "@/lib/cn";
 
 const tabs = [
@@ -12,7 +13,12 @@ const tabs = [
 
 export function ProcessTabs({ slug }: { slug: string }) {
   const pathname = usePathname();
+  const { version } = useAppVersion();
   const base = `/processes/${slug}`;
+
+  // Flow and Usage aren't finished yet — V0 hides the whole tab row (Overview
+  // included) rather than show a single tab with nothing to switch to.
+  if (version === "v0") return null;
 
   return (
     <div role="tablist" aria-label="Process views" className="flex items-center gap-1">

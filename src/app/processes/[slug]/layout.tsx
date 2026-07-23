@@ -3,8 +3,14 @@ import { ConnectorLogo } from "@/components/connector-logo";
 import { ProcessStatusToggle } from "@/components/process-status-toggle";
 import { ProcessTabs } from "@/components/process-tabs";
 import { ToolReference } from "@/components/tool-reference";
-import { cn, focusRing, treeGuide } from "@/lib/cn";
-import { getSkill, getProcess, orderedConnectorsForProcess, toolsForConnector } from "@/lib/mock-data";
+import { cn, focusRing } from "@/lib/cn";
+import {
+  connectorColor,
+  getSkill,
+  getProcess,
+  orderedConnectorsForProcess,
+  toolsForConnector,
+} from "@/lib/mock-data";
 
 // The Version/Connectors/Tools panel belongs to the process, not to any one
 // tab — it lives in the layout so Overview, Flow, and Usage all show the
@@ -21,7 +27,7 @@ export default async function ProcessLayout(props: LayoutProps<"/processes/[slug
     <div className="px-12 pb-6">
       <div className="sticky top-0 z-20 flex items-center justify-between bg-background pt-4 pb-4">
         <ProcessTabs slug={slug} />
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-3">
           <ProcessStatusToggle key={`status-${slug}`} initialActive={process.status === "active"} />
           <button
             type="button"
@@ -38,7 +44,7 @@ export default async function ProcessLayout(props: LayoutProps<"/processes/[slug
       <div className="mt-4 flex flex-col gap-8 shell:flex-row">
         <div className="min-w-0 flex-1">{props.children}</div>
 
-        <aside className="sticky top-[3.75rem] z-10 w-full shrink-0 self-start rounded-xl bg-gray-2 p-4 shell:w-72">
+        <aside className="sticky top-[3.75rem] z-10 w-full shrink-0 self-start rounded-xl border border-border bg-gray-2 p-4 shell:w-72">
           <div className="flex flex-col gap-5">
             <div className="flex items-center justify-between">
               <span className="text-body-medium text-gray-12">Version {currentVersion.version}</span>
@@ -56,10 +62,13 @@ export default async function ProcessLayout(props: LayoutProps<"/processes/[slug
                         <span className="text-caption text-gray-12">{connector.name}</span>
                       </div>
                       {tools && tools.length > 0 && (
-                        <ul className={cn(treeGuide, "mt-1.5 flex flex-col gap-1")}>
+                        <ul
+                          className="mt-1.5 ml-3 flex flex-col gap-1 border-l pl-2"
+                          style={{ borderColor: connectorColor(connector.id) }}
+                        >
                           {tools.map((tool) => (
                             <li key={tool}>
-                              <ToolReference tool={tool} />
+                              <ToolReference tool={tool} dot={false} />
                             </li>
                           ))}
                         </ul>
