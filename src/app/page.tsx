@@ -20,7 +20,7 @@ export default function HomePage() {
     {
       href: "/processes",
       title: "Processes",
-      summary: `${activeProcesses.length} active · ${activeProcesses.filter((p) => p.schedule).length} scheduled`,
+      summary: `${activeProcesses.length} active`,
     },
     {
       href: "/connectors",

@@ -2,7 +2,7 @@
 // back end is integrated. The shapes mirror the two real company-OS repos
 // this product replaces (corma-company-os, second-brain), genericized:
 // docs carry owner + verified date + source-of-truth pointers, processes have
-// a lifecycle + schedule and are composed of skills reused across processes,
+// a lifecycle and are composed of skills reused across processes,
 // connectors carry Oto's real installation state. Dates are preformatted
 // display strings so server and client can never disagree on locale.
 
@@ -86,9 +86,7 @@ export type Process = {
   name: string;
   description: string;
   status: "draft" | "active" | "deprecated";
-  kind: "deliverable" | "ops";
   owner: string;
-  schedule: string | null; // null = manual / on demand
   skillIds: string[];
   // Real tool identifiers (as they appear in `body`'s code spans), for
   // processes pulled from an actual doctrine. Takes over from skillIds in
@@ -100,7 +98,6 @@ export type Process = {
   // connectorIds this is what makes the knowledge graph a picture of the
   // company rather than of a wiki — see src/lib/knowledge-graph.ts.
   docSlugs: string[];
-  outputs: string[];
   // Most recent run first. Empty for processes that have never run (drafts).
   runs: ProcessRun[];
   // Highest version first — versions[0] is the current one.
@@ -152,17 +149,15 @@ export const skills: Skill[] = [
 export const processes: Process[] = [
   // Real doctrine pulled from Oto (org "Atlas", oto_procedure slug
   // "vendor-contact-sourcing", v3) — everything else in this array is
-  // invented. Oto's doctrine model has no schedule or run-history fields,
-  // so those stay null/empty until Oto exposes them.
+  // invented. Oto's doctrine model has no run-history field, so that stays
+  // empty until Oto exposes it.
   {
     slug: "vendor-contact-sourcing",
     name: "Sourcing contacts éditeurs (AI Ark → Folk → Lemlist)",
     description:
       "Extrait du groupe Folk « Providers » les entreprises avec un avis mais sans contact lié, trouve leur CEO / Head of Marketing / Head of Branding via AI Ark, les repousse dans Folk sous ce même groupe, puis les pousse vers la campagne Lemlist dédiée à l'outreach vendors.",
     status: "active",
-    kind: "deliverable",
     owner: "Julien",
-    schedule: null,
     skillIds: [],
     tools: [
       "mcp__folk-crm__list_companies",
@@ -176,7 +171,6 @@ export const processes: Process[] = [
     ],
     connectorIds: ["folk", "aiark", "lemlist"],
     docSlugs: [],
-    outputs: ["Folk contacts", "Lemlist campaign"],
     runs: [],
     versions: [
       { version: 3, createdAt: "Jul 22, 2026" },
@@ -337,9 +331,7 @@ export const processes: Process[] = [
     name: "Lead list builder",
     description: "Build a scored, enriched cold list from a plain-language brief and push it to a campaign.",
     status: "active",
-    kind: "deliverable",
     owner: "Alessandro",
-    schedule: null,
     skillIds: [
       "enrich-contact",
       "score-icp-fit",
@@ -350,7 +342,6 @@ export const processes: Process[] = [
     ],
     connectorIds: ["hubspot", "lemlist", "slack"],
     docSlugs: ["icp", "lead-scoring", "enrichment-waterfall", "outreach-playbook", "crm-hygiene", "glossary"],
-    outputs: ["CRM list", "Campaign", "Slack recap"],
     runs: [
       { ranAt: "Jul 21, 2026 14:32", durationMinutes: 6, status: "success" },
       { ranAt: "Jul 18, 2026 09:14", durationMinutes: 7, status: "success" },
@@ -368,13 +359,10 @@ export const processes: Process[] = [
     name: "Weekly feedback report",
     description: "Turn the week's call transcripts into a report, tickets, and a Slack recap.",
     status: "active",
-    kind: "deliverable",
     owner: "Julien",
-    schedule: "Mon 09:00",
     skillIds: ["extract-call-feedback", "render-report", "post-slack-digest", "file-tickets"],
     connectorIds: ["notion", "slack"],
     docSlugs: ["feedback-pipeline-runbook", "glossary", "voice-guide"],
-    outputs: ["Report page", "Tickets", "Slack recap"],
     runs: [
       { ranAt: "Jul 20, 2026 09:00", durationMinutes: 12, status: "success" },
       { ranAt: "Jul 13, 2026 09:00", durationMinutes: 11, status: "success" },
@@ -390,13 +378,10 @@ export const processes: Process[] = [
     name: "Competitor watch",
     description: "Monitor competitor accounts for engagement signals and start outreach.",
     status: "active",
-    kind: "deliverable",
     owner: "Alessandro",
-    schedule: "Mon + Thu 07:00",
     skillIds: ["collect-hiring-signals", "detect-tech-stack", "draft-outreach", "post-slack-digest"],
     connectorIds: ["hubspot", "lemlist", "slack"],
     docSlugs: ["competitors", "icp", "outreach-playbook"],
-    outputs: ["Campaign", "Slack recap"],
     runs: [
       { ranAt: "Jul 21, 2026 07:00", durationMinutes: 4, status: "success" },
       { ranAt: "Jul 17, 2026 07:00", durationMinutes: 4, status: "success" },
@@ -409,13 +394,10 @@ export const processes: Process[] = [
     name: "Churn alerts",
     description: "Watch product usage for drop-off patterns and alert the account owner.",
     status: "active",
-    kind: "ops",
     owner: "Julien",
-    schedule: "Daily 08:00",
     skillIds: ["pull-crm-records", "post-slack-digest"],
     connectorIds: ["zohoanalytics", "hubspot", "slack"],
     docSlugs: ["glossary", "data-model", "people"],
-    outputs: ["Slack alert"],
     runs: [
       { ranAt: "Jul 21, 2026 08:00", durationMinutes: 2, status: "success" },
       { ranAt: "Jul 20, 2026 08:00", durationMinutes: 2, status: "success" },
@@ -431,13 +413,10 @@ export const processes: Process[] = [
     name: "Workspace health check",
     description: "Probe every connector, flag stale docs, and report drift before it bites.",
     status: "active",
-    kind: "ops",
     owner: "Alessandro",
-    schedule: "Daily 08:00",
     skillIds: ["post-slack-digest"],
     connectorIds: ["notion", "slack"],
     docSlugs: ["connector-conventions", "agent-runbook", "security-posture"],
-    outputs: ["Slack heartbeat"],
     runs: [
       { ranAt: "Jul 21, 2026 08:00", durationMinutes: 3, status: "success" },
       { ranAt: "Jul 20, 2026 08:00", durationMinutes: 3, status: "success" },
@@ -454,13 +433,10 @@ export const processes: Process[] = [
     name: "Founder content drafts",
     description: "Draft daily social posts in the founder's voice for review by emoji.",
     status: "draft",
-    kind: "deliverable",
     owner: "Julien",
-    schedule: null,
     skillIds: ["draft-outreach", "post-slack-digest"],
     connectorIds: ["slack"],
     docSlugs: ["voice-guide", "overview"],
-    outputs: ["Slack drafts"],
     runs: [],
     versions: [{ version: 1, createdAt: "Jul 19, 2026" }],
   },
@@ -469,13 +445,10 @@ export const processes: Process[] = [
     name: "Invoice sync",
     description: "Reconcile invoices between billing and accounting, flag mismatches.",
     status: "deprecated",
-    kind: "ops",
     owner: "Alessandro",
-    schedule: null,
     skillIds: ["pull-crm-records", "sync-crm"],
     connectorIds: ["hubspot"],
     docSlugs: ["data-model", "reporting-stack"],
-    outputs: ["Ledger updates"],
     runs: [{ ranAt: "Mar 2, 2026 10:00", durationMinutes: 5, status: "success" }],
     versions: [
       { version: 4, createdAt: "Feb 20, 2026" },

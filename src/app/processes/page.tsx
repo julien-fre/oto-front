@@ -22,9 +22,6 @@ export default function ProcessesPage() {
                 {process.description}
               </span>
             </span>
-            <span className="shrink-0 text-caption text-muted">
-              {process.schedule ?? "Manual"}
-            </span>
             <span
               className={
                 process.status === "active"

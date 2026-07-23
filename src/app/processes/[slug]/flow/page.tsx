@@ -48,33 +48,18 @@ export default async function ProcessFlowPage({ params }: PageProps<"/processes/
 
   return (
     <ol className="max-w-prose">
-      <FlowStep index={1} label="Trigger">
-        <p className="text-body text-gray-12">{process.schedule ?? "Manual — run on demand"}</p>
-      </FlowStep>
       {processSkills.map((skill, i) => (
-        <FlowStep key={skill.id} index={i + 2} label={i === 0 ? "Skills" : undefined}>
+        <FlowStep key={skill.id} index={i + 1} label={i === 0 ? "Skills" : undefined}>
           <p className="text-body text-gray-12">{skill.name}</p>
           <p className="mt-0.5 text-caption text-muted">{skill.description}</p>
         </FlowStep>
       ))}
-      <FlowStep index={processSkills.length + 2} label="Connectors">
+      <FlowStep index={processSkills.length + 1} label="Connectors" last>
         <ul className="flex flex-wrap gap-3">
           {processConnectors.map((connector) => (
             <li key={connector.id} className="flex items-center gap-2">
               <ConnectorLogo connector={connector} />
               <span className="text-body text-gray-12">{connector.name}</span>
-            </li>
-          ))}
-        </ul>
-      </FlowStep>
-      <FlowStep index={processSkills.length + 3} label="Outputs" last>
-        <ul className="flex flex-wrap gap-2">
-          {process.outputs.map((output) => (
-            <li
-              key={output}
-              className="rounded-full bg-gray-3 px-3 py-1 text-caption text-gray-11"
-            >
-              {output}
             </li>
           ))}
         </ul>
