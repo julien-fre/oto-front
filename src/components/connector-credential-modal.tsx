@@ -1,28 +1,26 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { XIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
-import type { Connector } from "@/lib/mock-data";
+import type { Connector, CredentialField } from "@/lib/mock-data";
 
-// What kind of field(s) this connector's credential needs — derived from the
-// real secretKind, not invented. oauth has no fields at all (a connect
-// button instead); "fields" covers connectors whose exact field schema
-// oto-front doesn't model, so it gets one neutral field rather than
-// fabricated field names.
-function credentialFieldsFor(secretKind: string): { label: string; type: string }[] {
+// Mock-data fallback when a connector has no real credentialFields (only
+// populated for connectors fetched from the backend) — a guess, not
+// invented field names, so the form still renders something reasonable.
+function guessFieldsFor(secretKind: string): CredentialField[] {
   switch (secretKind) {
     case "api_key":
-      return [{ label: "API key", type: "password" }];
+      return [{ name: "key", label: "API key", secret: true, required: true, help: "" }];
     case "basic_auth":
       return [
-        { label: "Username", type: "text" },
-        { label: "Password", type: "password" },
+        { name: "email", label: "Email", secret: false, required: true, help: "" },
+        { name: "password", label: "Password", secret: true, required: true, help: "" },
       ];
     case "cookie":
-      return [{ label: "Session cookie", type: "password" }];
+      return [{ name: "cookie", label: "Session cookie", secret: true, required: true, help: "" }];
     case "fields":
-      return [{ label: "Credentials", type: "password" }];
+      return [{ name: "value", label: "Credentials", secret: true, required: true, help: "" }];
     default:
       return [];
   }
@@ -39,10 +37,15 @@ export function ConnectorCredentialModal({
   open: boolean;
   hasCredential: boolean;
   onClose: () => void;
-  onSave: () => void;
+  // Populated only for kinds oto-front actually persists (api_key,
+  // basic_auth, fields) — keyed by each field's real `name`. cookie/oauth
+  // call onSave() with nothing, since neither is a form post.
+  onSave: (fields?: Record<string, string>) => void | Promise<void>;
 }) {
   const firstFieldRef = useRef<HTMLInputElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -59,8 +62,23 @@ export function ConnectorCredentialModal({
   }, [open, onClose]);
 
   if (!open) return null;
-  const fields = credentialFieldsFor(connector.secretKind);
+  const fields = connector.credentialFields?.length
+    ? connector.credentialFields
+    : guessFieldsFor(connector.secretKind);
   const title = hasCredential ? `Update ${connector.name}` : `Connect ${connector.name}`;
+
+  async function handleSave(values?: Record<string, string>) {
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(values);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save.");
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
+  }
 
   return (
     <>
@@ -91,22 +109,39 @@ export function ConnectorCredentialModal({
           {connector.secretKind === "oauth" ? (
             <button
               type="button"
-              onClick={onSave}
+              onClick={() => handleSave()}
+              disabled={saving}
               className={cn(
-                "h-8 rounded-full bg-gray-12 px-3 text-button text-background hover:opacity-90",
+                "h-8 rounded-full bg-gray-12 px-3 text-button text-background hover:opacity-90 disabled:opacity-60",
                 focusRing,
               )}
             >
-              Connect with OAuth
+              {saving ? "Connecting…" : "Connect with OAuth"}
             </button>
           ) : (
-            <>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const data = new FormData(e.currentTarget);
+                // api_key/basic_auth/fields are the only kinds oto-front
+                // actually persists — cookie still just guesses a field for
+                // display, nothing real to post it to yet.
+                const values =
+                  connector.secretKind !== "cookie"
+                    ? Object.fromEntries(fields.map((f) => [f.name, (data.get(f.name) as string) ?? ""]))
+                    : undefined;
+                handleSave(values);
+              }}
+              className="flex flex-col gap-3"
+            >
               {fields.map((field, i) => (
-                <div key={field.label}>
+                <div key={field.name}>
                   <label className="text-caption text-gray-12">{field.label}</label>
                   <input
                     ref={i === 0 ? firstFieldRef : undefined}
-                    type={field.type}
+                    name={field.name}
+                    type={field.secret ? "password" : "text"}
+                    required={field.required}
                     className={cn(
                       "mt-1 h-8 w-full rounded-md border border-border bg-background px-2 text-body text-gray-12 placeholder:text-placeholder focus:outline-none",
                       focusRing,
@@ -115,17 +150,18 @@ export function ConnectorCredentialModal({
                 </div>
               ))}
               <button
-                type="button"
-                onClick={onSave}
+                type="submit"
+                disabled={saving}
                 className={cn(
-                  "h-8 self-start rounded-full bg-gray-12 px-3 text-button text-background hover:opacity-90",
+                  "h-8 self-start rounded-full bg-gray-12 px-3 text-button text-background hover:opacity-90 disabled:opacity-60",
                   focusRing,
                 )}
               >
-                Save
+                {saving ? "Saving…" : "Save"}
               </button>
-            </>
+            </form>
           )}
+          {error && <p className="text-caption text-red-11">{error}</p>}
         </div>
       </div>
     </>
