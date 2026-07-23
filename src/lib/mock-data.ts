@@ -108,6 +108,18 @@ export type Process = {
   body?: Block[];
 };
 
+// Real per-field credential schema (oto-backend's `credential_fields`, ADR
+// 0011) — e.g. api_key = one `key` field, Planity's basic_auth = `email` +
+// `password`. Optional: only populated for connectors fetched from the real
+// backend; mock data falls back to a guess based on secretKind.
+export type CredentialField = {
+  name: string;
+  label: string;
+  secret: boolean;
+  required: boolean;
+  help: string;
+};
+
 export type Connector = {
   id: string;
   name: string;
@@ -126,6 +138,13 @@ export type Connector = {
   authModes: string[];
   secretKind: string;
   personalSession: boolean;
+  credentialFields?: CredentialField[];
+  // Real ConnectorMeta.auth (ADR 0024) — which connection widget applies.
+  // method: "secret" (form) | "cookie" (Browserbase session) | "oauth"
+  // (federated redirect) | "hosted" (Unipile). cardinality "multi_account"
+  // is Google-only today. Optional: absent for mock-only connectors.
+  authMethod?: string;
+  authCardinality?: string;
 };
 
 // The corpus itself lives in its own file purely for size — this stays the

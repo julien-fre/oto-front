@@ -3,15 +3,25 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ConnectorCredentialModal } from "@/components/connector-credential-modal";
+import { ConnectorFederatedAccess } from "@/components/connector-federated-access";
 import { ConnectorLogo } from "@/components/connector-logo";
+import { ConnectorSessionConnect } from "@/components/connector-session-connect";
 import { Toggle } from "@/components/toggle";
 import { ChevronRightIcon, XIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
+import { connKind } from "@/lib/connector-kind";
 import {
   statusDotClassName,
   statusLabels,
   type ConnectorStatusKey,
 } from "@/lib/connector-status";
+import {
+  deleteConnectorCredential,
+  pauseConnector,
+  selectConnector,
+  setConnectorCredential,
+  unselectConnector,
+} from "@/lib/connectors-api";
 import { connectorUsage, team, teams, type Connector } from "@/lib/mock-data";
 
 const linkClassName =
@@ -75,11 +85,15 @@ export function ConnectorDetailPanel({
   const [status, setStatus] = useState<ConnectorStatusKey>(
     () => connector?.status ?? "not_selected",
   );
+  const [statusPending, setStatusPending] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [hasCredential, setHasCredential] = useState(
     () => (connector?.status ?? "not_selected") !== "not_selected",
   );
   const [credentialModalOpen, setCredentialModalOpen] = useState(false);
+  const [sessionConnectOpen, setSessionConnectOpen] = useState(false);
+  const [disconnectError, setDisconnectError] = useState<string | null>(null);
   const [enabledNamespaces, setEnabledNamespaces] = useState<Record<string, boolean>>(() =>
     Object.fromEntries((connector?.namespaces ?? []).map((ns) => [ns, true])),
   );
@@ -93,10 +107,27 @@ export function ConnectorDetailPanel({
     [connector?.owner ?? ""]: true,
   }));
 
+  async function applyStatus(next: ConnectorStatusKey) {
+    if (!connector) return;
+    setStatusPending(true);
+    setStatusError(null);
+    try {
+      if (next === "active") await selectConnector(connector.id);
+      else if (next === "paused") await pauseConnector(connector.id);
+      else await unselectConnector(connector.id);
+      setStatus(next);
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : "Failed to update status.");
+    } finally {
+      setStatusPending(false);
+    }
+  }
+
   if (!connector) return null;
   const usage = connectorUsage(connector.id);
   const showPublisher =
     connector.publisher && connector.publisher.toLowerCase() !== connector.name.toLowerCase();
+  const kind = connKind(connector);
 
   return (
     <>
@@ -138,15 +169,16 @@ export function ConnectorDetailPanel({
               <button
                 type="button"
                 onClick={() => setStatusMenuOpen((o) => !o)}
+                disabled={statusPending}
                 aria-haspopup="menu"
                 aria-expanded={statusMenuOpen}
                 className={cn(
-                  "flex h-7 items-center gap-1.5 rounded-full border border-border px-3 text-button text-gray-12 hover:bg-gray-3",
+                  "flex h-7 items-center gap-1.5 rounded-full border border-border px-3 text-button text-gray-12 hover:bg-gray-3 disabled:opacity-60",
                   focusRing,
                 )}
               >
                 <span className={cn("size-1.5 shrink-0 rounded-full", statusDotClassName[status])} />
-                {statusLabels[status]}
+                {statusPending ? "Updating…" : statusLabels[status]}
                 <ChevronRightIcon className="rotate-90 text-icon" />
               </button>
               {statusMenuOpen && (
@@ -162,8 +194,8 @@ export function ConnectorDetailPanel({
                         type="button"
                         role="menuitem"
                         onClick={() => {
-                          setStatus(a.next);
                           setStatusMenuOpen(false);
+                          void applyStatus(a.next);
                         }}
                         className={cn(
                           "block w-full px-3 py-1.5 text-left text-body text-gray-12 hover:bg-gray-2",
@@ -177,27 +209,56 @@ export function ConnectorDetailPanel({
                 </>
               )}
             </div>
+            {statusError && <p className="mt-1 text-caption text-red-11">{statusError}</p>}
 
             <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
               <span className="text-body text-gray-12">Access</span>
-              {connector.secretKind === "none" ? (
+              {kind === "none" ? (
                 <span className="text-caption text-muted">No access needed</span>
+              ) : kind === "federated" ? (
+                <ConnectorFederatedAccess connector={connector} />
+              ) : kind === "google" || kind === "unipile" ? (
+                <span className="text-caption text-muted">Not supported in oto-front yet</span>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setCredentialModalOpen(true)}
-                  className={cn(
-                    "h-7 rounded-full px-3 text-button",
-                    hasCredential
-                      ? "border border-border text-gray-12 hover:bg-gray-3"
-                      : "bg-gray-12 text-background hover:opacity-90",
-                    focusRing,
+                <div className="flex items-center gap-3">
+                  {kind === "session" && hasCredential && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setDisconnectError(null);
+                        try {
+                          await deleteConnectorCredential(connector.id);
+                          setHasCredential(false);
+                        } catch (err) {
+                          setDisconnectError(
+                            err instanceof Error ? err.message : "Failed to disconnect.",
+                          );
+                        }
+                      }}
+                      className={cn("text-caption", linkClassName, focusRing)}
+                    >
+                      Disconnect
+                    </button>
                   )}
-                >
-                  {hasCredential ? "Update" : "Connect"}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      kind === "session" ? setSessionConnectOpen(true) : setCredentialModalOpen(true)
+                    }
+                    className={cn(
+                      "h-7 rounded-full px-3 text-button",
+                      hasCredential
+                        ? "border border-border text-gray-12 hover:bg-gray-3"
+                        : "bg-gray-12 text-background hover:opacity-90",
+                      focusRing,
+                    )}
+                  >
+                    {hasCredential ? "Update" : "Connect"}
+                  </button>
+                </div>
               )}
             </div>
+            {disconnectError && <p className="mt-1 text-caption text-red-11">{disconnectError}</p>}
 
             <div className="mt-3 border-t border-border pt-3">
               <div className="flex items-center justify-between">
@@ -408,11 +469,25 @@ export function ConnectorDetailPanel({
         open={credentialModalOpen}
         hasCredential={hasCredential}
         onClose={() => setCredentialModalOpen(false)}
-        onSave={() => {
+        onSave={async (fields) => {
+          if (["api_key", "basic_auth", "fields"].includes(connector.secretKind) && fields) {
+            await setConnectorCredential(connector.id, fields);
+          }
           setHasCredential(true);
           setCredentialModalOpen(false);
         }}
       />
+
+      {sessionConnectOpen && (
+        <ConnectorSessionConnect
+          connector={connector}
+          onClose={() => setSessionConnectOpen(false)}
+          onConnected={() => {
+            setHasCredential(true);
+            setSessionConnectOpen(false);
+          }}
+        />
+      )}
     </>
   );
 }
