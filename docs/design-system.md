@@ -302,7 +302,7 @@ The sidebar is where a new section becomes visible to the user, so its rules are
 | [`NavSection`](../src/components/shell/nav-section.tsx) | a destination that has children | label navigates, chevron expands, `+` adds |
 | [`NavFolder`](../src/components/shell/nav-folder.tsx) | grouping that isn't a page | the whole row toggles; no href, ever |
 
-Shared row grammar: `h-7`, `rounded-full`, `gap-2`, active is `bg-interactive-checked` + `text-body-medium`, idle hover is `bg-interactive-hovered`. Nested rows sit inside `treeGuide` (`ml-3 border-l border-gray-5 pl-1`, exported from `nav-folder.tsx`) — use it for every level so the tree lines up, rather than padding rows by hand. Nested `NavLink`s take `indent`, which swaps their label to `text-muted` until hover.
+Shared row grammar: `h-7`, `rounded-full`, `gap-2`, active is `bg-interactive-checked` + `text-body-medium`, idle hover is `bg-interactive-hovered`. Nested rows sit inside `treeGuide` (`ml-3 border-l border-gray-5 pl-1`, exported from [`cn.ts`](../src/lib/cn.ts)) — use it for every level so the tree lines up, rather than padding rows by hand. Nested `NavLink`s take `indent`, which swaps their label to `text-muted` until hover.
 
 Two behaviors worth copying when you build any dense row:
 
@@ -576,8 +576,11 @@ See [`slider.tsx`](../src/components/slider.tsx).
 
 ### Documents
 
-A reading surface, not a UI screen: [`knowledge/[slug]`](../src/app/knowledge/[slug]/page.tsx) is
-the reference. Three rules make it feel like a document rather than a settings page.
+A reading surface, not a UI screen: [`knowledge/[id]`](../src/app/knowledge/[id]/page.tsx) is
+the reference — a client page rendering a live doc from the org knowledge base (fetched once by
+[`knowledge-provider.tsx`](../src/components/knowledge/knowledge-provider.tsx), body markdown
+converted to typed blocks by [`markdown.ts`](../src/lib/markdown.ts)). Three rules make it feel
+like a document rather than a settings page.
 
 - **A `{layout.doc-column-width}` (640px) column, `mx-auto`.** Centred in whatever width is left
   over, so opening or closing the rail rebalances the page instead of stranding the text against
@@ -587,21 +590,24 @@ the reference. Three rules make it feel like a document rather than a settings p
   hierarchy still comes from weight and spacing, and a document introduces no new sizes.
 - **No page `<h1>`.** The top bar's trailing breadcrumb crumb already is the document's title
   (see [The app shell](#the-app-shell)). A document opens on its property block instead — a
-  `<dl>` of `text-caption` rows with a `w-28` key column, the metadata triad (owner, verified
-  date, source of truth) always visible and the rest folded behind `Show N more properties`.
+  `<dl>` of `text-caption` rows with a `w-28` key column — the freshness-dotted Updated date
+  always visible, the rest (kind, created, link counts, public link) folded behind
+  `Show N more properties`. Every row is backed by a real backend field; the mock era's Owner
+  and Source-of-truth rows died with the wiring ("no backend field → remove, don't fake").
 
 **The graph rail.** A `{layout.doc-rail-width}` (384px) `<aside>` on the right — a rounded card,
 inset from the page edges and sticky at full viewport height, holding exactly one thing: the
 document's local graph with its depth slider. (It briefly carried Links and Outline tabs too; cut
 by design review — the link counts already live in the property block.) It collapses to a single
-icon button wearing the graph icon, and persists its state in a cookie read on the server the way
-the sidebar does, so it never flashes. Below the `shell` breakpoint it stacks under the document
+icon button wearing the graph icon, and persists its state in a cookie (client-read: the page
+renders behind the auth gate, so there is no server pass to flash against). Below the `shell`
+breakpoint it stacks under the document
 with a plain top border rather than becoming an overlay — reference material does not deserve a
 drawer.
 
 Inline references to other docs render through
 [`doc-reference.tsx`](../src/components/knowledge/doc-reference.tsx): the standard inline-link
-treatment plus a leading identity dot in the target's `docColor`, so a doc looks like itself in
+treatment plus a leading identity dot in the target's `docAccentColor`, so a doc looks like itself in
 the sidebar, in the graph, and mid-sentence. A reference whose target does not exist renders as
 dotted-underlined `text-placeholder` rather than vanishing — dead links should be visible.
 
@@ -614,9 +620,9 @@ tick moves several hundred elements at 60Hz, and that many DOM mutations means a
 every frame.
 
 **Nodes carry their kind in their shape, never in colour alone**: a filled circle is a doc, a
-rounded square a process, a ring a connector, a 50%-alpha circle an unresolved link. Colour is the
-*second* signal, picked by a "Color by" dimension (folder, type, owner, freshness), and every
-choice ships a legend. Radius is `clamp(3 * sqrt(links + 1), 8, 30)` — note the floor, which means
+rounded square a note (agent-written), a ring a source (imported), a 50%-alpha circle an
+unresolved [[wikilink]]. Colour is the *second* signal, picked by a "Color by" dimension
+(branch, type, freshness), and every choice ships a legend. Radius is `clamp(3 * sqrt(links + 1), 8, 30)` — note the floor, which means
 low-degree nodes are minimum-sized rather than small.
 
 **Hover dims everything else to `0.2`** and leaves the hovered node plus its one-hop neighbours at
@@ -696,9 +702,9 @@ Non-negotiable, because the app is dense and keyboard-heavy:
 
 Say the section is `Reports`. In order:
 
-1. **Route.** `src/app/reports/page.tsx`, plus `src/app/reports/[slug]/page.tsx` if items have detail pages. Export `metadata` — the root layout's `title.template` appends `· Oto`, so `export const metadata = { title: "Reports" }` is enough. (Same-segment exception: the root `page.tsx` needs `title: { absolute: … }`.) Detail pages use `generateMetadata` with the awaited `params`.
+1. **Route.** `src/app/reports/page.tsx`, plus `src/app/reports/[slug]/page.tsx` if items have detail pages. Export `metadata` — the root layout's `title.template` appends `· Oto`, so `export const metadata = { title: "Reports" }` is enough. (Same-segment exception: the root `page.tsx` needs `title: { absolute: … }`.) Detail pages use `generateMetadata` with the awaited `params` — except client detail pages (auth-gated sections), which pin a static title in their section `layout.tsx` and set `document.title` once the data resolves, the way [`knowledge/[id]`](../src/app/knowledge/[id]/page.tsx) does.
 2. **Body.** `<div className="px-12 py-6">`, `max-w-6xl` too if it's a card grid. No `<h1>`.
-3. **Breadcrumb.** Add a branch to `crumbsFor()` in [`top-bar.tsx`](../src/components/shell/top-bar.tsx). Ancestors get an `href`, the trailing crumb doesn't; a grouping that isn't a page (a folder) gets a crumb with no href.
+3. **Breadcrumb.** Add a branch to `crumbsFor()` in [`top-bar.tsx`](../src/components/shell/top-bar.tsx). Ancestors get an `href`, the trailing crumb doesn't.
 4. **Navigation.** Add to `SidebarContent` in [`sidebar.tsx`](../src/components/shell/sidebar.tsx) — see [Navigation](#navigation) for which row component to use. A `<NavSection>` needs a stable `id`: that id is what the expanded-groups cookie persists, so renaming it silently resets everyone's sidebar.
 5. **Data.** Until the back end lands, shapes and fixtures go in [`src/lib/mock-data.ts`](../src/lib/mock-data.ts) with the accessors beside them. Preformat dates as display strings so server and client can't disagree on locale.
 6. **Components.** Section-specific components go in `src/components/<section>-*.tsx`; anything the shell uses lives in `src/components/shell/`. Client components only where there's state — pages stay server components.

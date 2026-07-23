@@ -5,28 +5,38 @@ import { usePathname } from "next/navigation";
 import { Fragment } from "react";
 import { ChevronRightIcon, PanelLeftIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
-import { getDoc, getProcess, knowledgeFolders } from "@/lib/mock-data";
+import { useKnowledge, type KnowledgeState } from "@/components/knowledge/knowledge-provider";
+import { getProcess } from "@/lib/mock-data";
 import { useSidebar } from "./sidebar-provider";
 
 type Crumb = { label: string; href?: string };
 
 // Where you are, and what it belongs to. Only the trailing crumb is the page
-// itself; anything with an href is an ancestor you can climb back to. The
-// Knowledge folder crumb has no href — folders are disclosure, not pages.
-function crumbsFor(pathname: string): Crumb[] {
+// itself; anything with an href is an ancestor you can climb back to.
+function crumbsFor(pathname: string, knowledge: KnowledgeState): Crumb[] {
   const [, section, slug] = pathname.split("/");
 
   if (!section) return [{ label: "Home" }];
 
   if (section === "knowledge") {
     if (!slug) return [{ label: "Knowledge" }];
-    const doc = getDoc(slug);
+    // A doc's ancestors come from the live tree (parent_id chain). Before the
+    // KB has loaded the trail degrades to the section crumb alone.
+    if (knowledge.kind !== "ready") return [{ label: "Knowledge", href: "/knowledge" }];
+    const doc = knowledge.kb.byId.get(Number(slug));
     if (!doc) return [{ label: "Knowledge", href: "/knowledge" }];
-    const folder = knowledgeFolders.find((f) => f.id === doc.category);
+    const ancestors: Crumb[] = [];
+    const seen = new Set<number>([doc.id]);
+    let cursor = doc.parentId != null ? knowledge.kb.byId.get(doc.parentId) : undefined;
+    while (cursor && !seen.has(cursor.id)) {
+      seen.add(cursor.id);
+      ancestors.unshift({ label: cursor.title || `Untitled ${cursor.id}`, href: `/knowledge/${cursor.id}` });
+      cursor = cursor.parentId != null ? knowledge.kb.byId.get(cursor.parentId) : undefined;
+    }
     return [
       { label: "Knowledge", href: "/knowledge" },
-      ...(folder ? [{ label: folder.label }] : []),
-      { label: doc.title },
+      ...ancestors,
+      { label: doc.title || `Untitled ${doc.id}` },
     ];
   }
 
@@ -46,7 +56,8 @@ function crumbsFor(pathname: string): Crumb[] {
 export function TopBar() {
   const pathname = usePathname();
   const { open, toggleNav } = useSidebar();
-  const crumbs = crumbsFor(pathname);
+  const { state: knowledge } = useKnowledge();
+  const crumbs = crumbsFor(pathname, knowledge);
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2">

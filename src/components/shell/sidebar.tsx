@@ -13,21 +13,59 @@ import {
   WorkflowIcon,
 } from "@/components/icons";
 import { OtoMark } from "@/components/oto-mark";
-import { cn, focusRing } from "@/lib/cn";
-import {
-  docColor,
-  docsInFolder,
-  getDoc,
-  knowledgeFolders,
-  LABEL_DOT_COLORS,
-  processColor,
-  processes,
-} from "@/lib/mock-data";
-import { NavFolder } from "./nav-folder";
+import { cn, focusRing, treeGuide } from "@/lib/cn";
+import { useKnowledge } from "@/components/knowledge/knowledge-provider";
+import { docAccentColor, type KnowledgeBase, type KnowledgeDoc } from "@/lib/knowledge-api";
+import { processColor, processes } from "@/lib/mock-data";
 import { NavLink } from "./nav-link";
 import { NavSection } from "./nav-section";
 import { SidebarRail } from "./sidebar-rail";
 import { useSidebar } from "./sidebar-provider";
+
+// The knowledge section's children are the live KB tree (parent_id
+// hierarchy, sibling order curated by the backend). Nothing renders while
+// signed out or loading — the section link alone is the affordance, the same
+// way connectors carries no children. Depth is capped at three levels; the
+// KB is curated shallow (its lint flags deep nesting long before this).
+const MAX_TREE_DEPTH = 3;
+
+function KnowledgeTree() {
+  const { state } = useKnowledge();
+  if (state.kind !== "ready") return null;
+  return <KnowledgeBranch kb={state.kb} parentId={null} depth={0} />;
+}
+
+function KnowledgeBranch({
+  kb,
+  parentId,
+  depth,
+}: {
+  kb: KnowledgeBase;
+  parentId: number | null;
+  depth: number;
+}) {
+  const docs = kb.children.get(parentId) ?? [];
+  if (docs.length === 0) return null;
+  return (
+    <>
+      {docs.map((doc: KnowledgeDoc) => (
+        <div key={doc.id}>
+          <NavLink
+            href={`/knowledge/${doc.id}`}
+            label={doc.title || `Untitled ${doc.id}`}
+            icon={<FileTextIcon style={{ color: docAccentColor(doc.id) }} />}
+            indent
+          />
+          {depth + 1 < MAX_TREE_DEPTH && (kb.children.get(doc.id)?.length ?? 0) > 0 && (
+            <div className={treeGuide}>
+              <KnowledgeBranch kb={kb} parentId={doc.id} depth={depth + 1} />
+            </div>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
 
 function SidebarContent({ variant }: { variant: "desktop" | "drawer" | "peek" }) {
   const { toggleNav, setPaletteOpen } = useSidebar();
@@ -88,24 +126,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" | "peek" })
             icon={<BookOpenIcon />}
             addLabel="New doc"
           >
-            {knowledgeFolders.map((folder, i) => (
-              <NavFolder
-                key={folder.id}
-                id={`knowledge-${folder.id}`}
-                label={folder.label}
-                color={LABEL_DOT_COLORS[i % LABEL_DOT_COLORS.length]}
-              >
-                {docsInFolder(folder.id).map((doc) => (
-                  <NavLink
-                    key={doc.slug}
-                    href={`/knowledge/${doc.slug}`}
-                    label={doc.title}
-                    icon={<FileTextIcon style={{ color: docColor(doc.slug) }} />}
-                    indent
-                  />
-                ))}
-              </NavFolder>
-            ))}
+            <KnowledgeTree />
           </NavSection>
           <NavSection
             idPrefix={variant}
@@ -210,13 +231,8 @@ export function Sidebar() {
   // until the next navigation. The drawer and the peek overlay always close
   // on navigation.
   useEffect(() => {
-    if (pathname.startsWith("/knowledge")) {
-      expandGroup("knowledge");
-      // Also open the folder holding this doc, so the active row is revealed
-      // rather than hidden inside a collapsed folder.
-      const doc = getDoc(pathname.split("/")[2] ?? "");
-      if (doc) expandGroup(`knowledge-${doc.category}`);
-    } else if (pathname.startsWith("/processes")) expandGroup("processes");
+    if (pathname.startsWith("/knowledge")) expandGroup("knowledge");
+    else if (pathname.startsWith("/processes")) expandGroup("processes");
   }, [pathname, expandGroup]);
 
   useEffect(() => {

@@ -32,8 +32,11 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     },
   });
   if (!resp.ok) {
-    const body = await resp.json().catch(() => ({}));
-    throw new ApiError(resp.status, (body as { error?: string }).error ?? resp.statusText);
+    const body = (await resp.json().catch(() => ({}))) as { error?: string; detail?: string };
+    // `error` is the machine slug; `detail`, when the backend sends it, is the
+    // human sentence (oto-backend _rest_adapter passes AuthzDenied messages
+    // through). Prefer the sentence for display, keep the slug as fallback.
+    throw new ApiError(resp.status, body.detail ?? body.error ?? resp.statusText);
   }
   return resp.json() as Promise<T>;
 }
