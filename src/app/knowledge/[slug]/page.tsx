@@ -3,9 +3,8 @@ import { notFound } from "next/navigation";
 import { DocBody } from "@/components/knowledge/doc-body";
 import { DocProperties } from "@/components/knowledge/doc-properties";
 import { DocRail } from "@/components/knowledge/doc-rail";
-import { headingsOf } from "@/lib/doc-outline";
 import { DOC_RAIL_COOKIE } from "@/lib/graph-settings";
-import { backlinksFor, getDoc, outgoingFor, processesReading } from "@/lib/mock-data";
+import { backlinksFor, getDoc, processesReading } from "@/lib/mock-data";
 
 export async function generateMetadata({ params }: PageProps<"/knowledge/[slug]">) {
   const { slug } = await params;
@@ -18,7 +17,6 @@ export default async function DocPage({ params }: PageProps<"/knowledge/[slug]">
   if (!doc) notFound();
 
   const backlinks = backlinksFor(slug);
-  const outgoing = outgoingFor(slug);
   const readers = processesReading(slug);
   // Server-read so the rail renders in its remembered state with no flash,
   // matching how the sidebar's own state is handled in the root layout.
@@ -42,17 +40,11 @@ export default async function DocPage({ params }: PageProps<"/knowledge/[slug]">
       </div>
 
       <DocRail
-        // Remount per doc so the rail's tab and local-graph controls reset
-        // with the document rather than carrying over.
+        // Remount per doc so the local-graph controls reset with the document
+        // rather than carrying over.
         key={slug}
+        slug={slug}
         defaultOpen={railOpen}
-        data={{
-          slug,
-          backlinks: backlinks.map((d) => ({ slug: d.slug, title: d.title })),
-          outgoing: outgoing.map((o) => ({ slug: o.slug, title: o.doc?.title ?? null })),
-          readers: readers.map((p) => ({ slug: p.slug, name: p.name })),
-          headings: headingsOf(doc.body),
-        }}
       />
     </div>
   );
