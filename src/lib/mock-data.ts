@@ -6,6 +6,8 @@
 // connectors carry Oto's real installation state. Dates are preformatted
 // display strings so server and client can never disagree on locale.
 
+import { knowledgeDocs } from "./knowledge-docs";
+
 // Identity colors for nested items — the sidebar marks each doc/process with a
 // colored dot so the sub-sections are visually distinct (differentiation, not
 // decoration). Ordered so consecutive items in a section read as clearly
@@ -23,6 +25,29 @@ export const LABEL_DOT_COLORS = [
   "#ab4aba", // plum
 ] as const;
 
+// Document content is a typed block array rather than a markdown string: no
+// parser to maintain, total render control, and it forces the block schema the
+// back end will eventually serve. Inline references carry a slug, not a URL, so
+// a doc that gets renamed never leaves a dead link in prose.
+export type Span =
+  | string
+  | { ref: string } // inline reference to another doc, by slug
+  | { em: string }
+  | { strong: string }
+  | { code: string }
+  | { link: { href: string; label: string } };
+
+export type Block =
+  | { type: "h2" | "h3"; text: string }
+  | { type: "p"; spans: Span[] }
+  | { type: "ul" | "ol"; items: Span[][] }
+  | { type: "checklist"; items: { done: boolean; spans: Span[] }[] }
+  | { type: "table"; head: string[]; rows: Span[][][] }
+  | { type: "callout"; tone: "note" | "warn"; spans: Span[] }
+  | { type: "code"; lang: string; text: string }
+  | { type: "quote"; spans: Span[] }
+  | { type: "divider" };
+
 export type Doc = {
   slug: string;
   title: string;
@@ -31,13 +56,29 @@ export type Doc = {
   verifiedAt: string;
   sourceOfTruth?: string;
   excerpt: string;
-  links: string[]; // slugs of related docs
+  links: string[]; // slugs of related docs; a slug with no doc is an unresolved link
+  // Stored, never computed from the clock. Dates in this file are preformatted
+  // display strings precisely so server and client cannot disagree — deriving
+  // staleness from Date.now() would reintroduce the hazard it avoids.
+  freshness: "fresh" | "aging" | "stale";
+  body: Block[];
 };
 
 export type Skill = {
   id: string;
   name: string;
   description: string;
+};
+
+export type ProcessRun = {
+  ranAt: string;
+  durationMinutes: number;
+  status: "success" | "failed";
+};
+
+export type ProcessVersion = {
+  version: number;
+  createdAt: string;
 };
 
 export type Process = {
@@ -49,8 +90,25 @@ export type Process = {
   owner: string;
   schedule: string | null; // null = manual / on demand
   skillIds: string[];
+  // Real tool identifiers (as they appear in `body`'s code spans), for
+  // processes pulled from an actual doctrine. Takes over from skillIds in
+  // the panel when present — skills are an invented abstraction, this is
+  // literally what the procedure calls.
+  tools?: string[];
   connectorIds: string[];
+  // The knowledge this process reads before it runs. Together with
+  // connectorIds this is what makes the knowledge graph a picture of the
+  // company rather than of a wiki — see src/lib/knowledge-graph.ts.
+  docSlugs: string[];
   outputs: string[];
+  // Most recent run first. Empty for processes that have never run (drafts).
+  runs: ProcessRun[];
+  // Highest version first — versions[0] is the current one.
+  versions: ProcessVersion[];
+  // The full procedure, block by block, for processes that have one written
+  // out (today: only the one pulled from Oto). Optional because most mock
+  // processes here only ever got a one-line description.
+  body?: Block[];
 };
 
 export type Connector = {
@@ -73,91 +131,9 @@ export type Connector = {
   personalSession: boolean;
 };
 
-export const docs: Doc[] = [
-  {
-    slug: "context-brief",
-    title: "Context brief",
-    category: "company",
-    owner: "Alessandro",
-    verifiedAt: "Jul 18, 2026",
-    excerpt: "Read this first: what the company sells, to whom, and where everything lives.",
-    links: ["overview", "glossary", "how-we-work"],
-  },
-  {
-    slug: "overview",
-    title: "Overview",
-    category: "company",
-    owner: "Alessandro",
-    verifiedAt: "Jul 14, 2026",
-    excerpt: "What we sell, core capabilities, ICP criteria, and the buyer personas.",
-    links: ["glossary"],
-  },
-  {
-    slug: "glossary",
-    title: "Glossary",
-    category: "company",
-    owner: "Julien",
-    verifiedAt: "Jul 10, 2026",
-    sourceOfTruth: "Warehouse · metric definitions win on conflict",
-    excerpt: "The definitions and IDs that make queries correct — metrics, events, and their traps.",
-    links: [],
-  },
-  {
-    slug: "people",
-    title: "People",
-    category: "company",
-    owner: "Alessandro",
-    verifiedAt: "Jul 8, 2026",
-    sourceOfTruth: "Notion · Teammate directory wins on conflict",
-    excerpt: "Who does what, and who owns which connector and process.",
-    links: ["how-we-work"],
-  },
-  {
-    slug: "how-we-work",
-    title: "How we work",
-    category: "company",
-    owner: "Julien",
-    verifiedAt: "Jun 30, 2026",
-    excerpt: "Rituals, decision rules, and how changes ship.",
-    links: ["context-brief"],
-  },
-  {
-    slug: "voice-guide",
-    title: "Voice guide",
-    category: "company",
-    owner: "Julien",
-    verifiedAt: "Jun 27, 2026",
-    excerpt: "Tone, phrasing rules, and the words we never use.",
-    links: [],
-  },
-  {
-    slug: "gtm-architecture",
-    title: "GTM architecture",
-    category: "wiki",
-    owner: "Alessandro",
-    verifiedAt: "Jun 20, 2026",
-    excerpt: "The full motion from signal to campaign, as one diagram.",
-    links: ["overview"],
-  },
-  {
-    slug: "feedback-pipeline-runbook",
-    title: "Feedback pipeline runbook and error handling",
-    category: "wiki",
-    owner: "Julien",
-    verifiedAt: "Jun 12, 2026",
-    excerpt: "Why the pipeline exists, how each step works, and what to do when it fails.",
-    links: ["glossary"],
-  },
-  {
-    slug: "decision-auto-merge",
-    title: "Decision: auto-merge with recap",
-    category: "decisions",
-    owner: "Alessandro",
-    verifiedAt: "Jul 20, 2026",
-    excerpt: "Changes merge without review; a recap posts to Slack after the fact.",
-    links: ["how-we-work"],
-  },
-];
+// The corpus itself lives in its own file purely for size — this stays the
+// single import surface for every consumer.
+export const docs: Doc[] = knowledgeDocs;
 
 export const skills: Skill[] = [
   { id: "pull-crm-records", name: "Pull CRM records", description: "Read companies, contacts, and deals from the CRM." },
@@ -174,6 +150,188 @@ export const skills: Skill[] = [
 ];
 
 export const processes: Process[] = [
+  // Real doctrine pulled from Oto (org "Atlas", oto_procedure slug
+  // "vendor-contact-sourcing", v3) — everything else in this array is
+  // invented. Oto's doctrine model has no schedule or run-history fields,
+  // so those stay null/empty until Oto exposes them.
+  {
+    slug: "vendor-contact-sourcing",
+    name: "Sourcing contacts éditeurs (AI Ark → Folk → Lemlist)",
+    description:
+      "Extrait du groupe Folk « Providers » les entreprises avec un avis mais sans contact lié, trouve leur CEO / Head of Marketing / Head of Branding via AI Ark, les repousse dans Folk sous ce même groupe, puis les pousse vers la campagne Lemlist dédiée à l'outreach vendors.",
+    status: "active",
+    kind: "deliverable",
+    owner: "Julien",
+    schedule: null,
+    skillIds: [],
+    tools: [
+      "mcp__folk-crm__list_companies",
+      "mcp__folk-crm__get_company_context",
+      "aiark_company_search",
+      "aiark_people_search",
+      "mcp__folk-crm__search_people_by_email",
+      "mcp__folk-crm__create_person",
+      "mcp__folk-crm__bulk_add_to_group",
+      "aiark_credits",
+    ],
+    connectorIds: ["folk", "aiark", "lemlist"],
+    docSlugs: [],
+    outputs: ["Folk contacts", "Lemlist campaign"],
+    runs: [],
+    versions: [
+      { version: 3, createdAt: "Jul 22, 2026" },
+      { version: 2, createdAt: "Jul 22, 2026" },
+      { version: 1, createdAt: "Jul 22, 2026" },
+    ],
+    body: [
+      { type: "h2", text: "Contexte" },
+      {
+        type: "p",
+        spans: [
+          "Cette procédure est le sous-bloc « recherche de contacts » du volet éditeurs de la stratégie d'outreach Softatlas (voir page KB « Outreach — Acquisition utilisateurs & éditeurs »). Elle part des entreprises déjà présentes dans Folk (groupe « Providers ») qui ont un avis sur Softatlas mais aucun contact rattaché, et en ressort des contacts qualifiés repoussés dans Folk et Lemlist.",
+        ],
+      },
+      { type: "h2", text: "Rôles ciblés (par entreprise, jusqu'à 3 contacts)" },
+      {
+        type: "ol",
+        items: [
+          [
+            { strong: "CEO / Fondateur" },
+            " — seniority ",
+            { code: "founder" },
+            "/",
+            { code: "owner" },
+            "/",
+            { code: "c_suite" },
+            ", title contient CEO / Chief Executive Officer / Founder.",
+          ],
+          [
+            { strong: "Head of Marketing" },
+            " — department ",
+            { code: "marketing" },
+            ", seniority ",
+            { code: "head" },
+            "/",
+            { code: "director" },
+            "/",
+            { code: "vp" },
+            ".",
+          ],
+          [
+            { strong: "Head of Branding / Brand" },
+            " — title contient brand / branding / brand marketing.",
+          ],
+        ],
+      },
+      { type: "h2", text: "Étapes" },
+      { type: "h3", text: "1. Extraire les entreprises cibles (Folk)" },
+      {
+        type: "p",
+        spans: [
+          "Dans le groupe Folk ",
+          { strong: "« Providers »" },
+          ", lister les entreprises (",
+          { code: "mcp__folk-crm__list_companies" },
+          ", filtré sur ce groupe) puis ne garder que celles qui :",
+        ],
+      },
+      {
+        type: "ul",
+        items: [
+          ["ont un ", { strong: "avis" }, " (review) renseigné sur Softatlas (champ personnalisé avis/reviews) ;"],
+          [
+            { strong: "n'ont aucune personne (contact) rattachée" },
+            " dans Folk (vérifier via ",
+            { code: "mcp__folk-crm__get_company_context" },
+            " — liste des personnes liées vide).",
+          ],
+        ],
+      },
+      {
+        type: "p",
+        spans: ["C'est cette liste filtrée (entreprise + domaine/site) qui alimente les étapes suivantes."],
+      },
+      { type: "h3", text: "2. Rechercher les contacts (AI Ark)" },
+      { type: "p", spans: ["Pour chaque entreprise filtrée à l'étape 1, et pour chaque rôle ciblé :"] },
+      {
+        type: "ul",
+        items: [
+          [
+            { code: "aiark_company_search" },
+            ' avec account: {"domain": {"any": {"include": ["<domaine>"]}}} pour confirmer/normaliser l\'entité si besoin.',
+          ],
+          [
+            { code: "aiark_people_search" },
+            " avec ",
+            { code: "account" },
+            " filtré sur le domaine et ",
+            { code: "contact" },
+            " filtré selon le rôle (cf. section rôles ciblés).",
+          ],
+        ],
+      },
+      {
+        type: "p",
+        spans: ["Garder le meilleur match par rôle (le plus senior / le plus proche du titre recherché)."],
+      },
+      { type: "h3", text: "3. Vérifier les doublons" },
+      {
+        type: "p",
+        spans: [
+          { code: "mcp__folk-crm__search_people_by_email" },
+          " sur chaque contact obtenu — ne pas recréer une fiche Folk existante, la mettre à jour si besoin (poste, entreprise).",
+        ],
+      },
+      { type: "h3", text: "4. Repousser vers Folk, sous le groupe Providers" },
+      {
+        type: "ul",
+        items: [
+          [
+            { code: "mcp__folk-crm__create_person" },
+            " pour chaque nouveau contact (prénom, nom, email, poste), ",
+            { strong: "rattaché à l'entreprise déjà présente dans Folk" },
+            ".",
+          ],
+          [
+            { code: "mcp__folk-crm__bulk_add_to_group" },
+            " pour ajouter ces contacts au ",
+            { strong: "même groupe « Providers »" },
+            " que leur entreprise (pas un groupe séparé) — les contacts apparaissent ainsi directement rattachés à leur fiche entreprise dans ce groupe.",
+          ],
+        ],
+      },
+      { type: "h3", text: "5. Pousser vers Lemlist" },
+      {
+        type: "p",
+        spans: [
+          "Ajouter les contacts (email, prénom, nom, société, poste) à la campagne Lemlist dédiée « Outreach Vendors — Claim & Review ». Si le connecteur Lemlist n'est pas encore activé sur l'org, l'activer d'abord (",
+          { code: "oto_connector" },
+          " op=select, name=lemlist).",
+        ],
+      },
+      { type: "h2", text: "Garde-fous" },
+      {
+        type: "ul",
+        items: [
+          [
+            "Ne traiter que les entreprises du groupe « Providers » ayant un avis ET aucune personne liée — ne pas re-traiter celles qui ont déjà au moins un contact.",
+          ],
+          ["Ne jamais pousser un contact deux fois dans la même campagne Lemlist."],
+          ["Vérifier les crédits disponibles (", { code: "aiark_credits" }, ") avant un run sur un grand nombre d'entreprises."],
+          [
+            "Une entreprise sans contact trouvé pour un rôle donné est journalisée comme « non trouvé », pas bloquant pour les autres rôles.",
+          ],
+        ],
+      },
+      { type: "h2", text: "Sortie attendue" },
+      {
+        type: "p",
+        spans: [
+          "Pour chaque run : nombre d'entreprises traitées (groupe Providers, avis sans contact), contacts trouvés par rôle, contacts créés/mis à jour dans Folk sous le groupe Providers, contacts poussés dans la campagne Lemlist.",
+        ],
+      },
+    ],
+  },
   {
     slug: "lead-list-builder",
     name: "Lead list builder",
@@ -191,7 +349,19 @@ export const processes: Process[] = [
       "sync-crm",
     ],
     connectorIds: ["hubspot", "lemlist", "slack"],
+    docSlugs: ["icp", "lead-scoring", "enrichment-waterfall", "outreach-playbook", "crm-hygiene", "glossary"],
     outputs: ["CRM list", "Campaign", "Slack recap"],
+    runs: [
+      { ranAt: "Jul 21, 2026 14:32", durationMinutes: 6, status: "success" },
+      { ranAt: "Jul 18, 2026 09:14", durationMinutes: 7, status: "success" },
+      { ranAt: "Jul 14, 2026 16:05", durationMinutes: 5, status: "success" },
+      { ranAt: "Jul 9, 2026 11:47", durationMinutes: 8, status: "failed" },
+    ],
+    versions: [
+      { version: 3, createdAt: "Jul 18, 2026" },
+      { version: 2, createdAt: "Jul 2, 2026" },
+      { version: 1, createdAt: "Jun 14, 2026" },
+    ],
   },
   {
     slug: "weekly-feedback-report",
@@ -203,7 +373,17 @@ export const processes: Process[] = [
     schedule: "Mon 09:00",
     skillIds: ["extract-call-feedback", "render-report", "post-slack-digest", "file-tickets"],
     connectorIds: ["notion", "slack"],
+    docSlugs: ["feedback-pipeline-runbook", "glossary", "voice-guide"],
     outputs: ["Report page", "Tickets", "Slack recap"],
+    runs: [
+      { ranAt: "Jul 20, 2026 09:00", durationMinutes: 12, status: "success" },
+      { ranAt: "Jul 13, 2026 09:00", durationMinutes: 11, status: "success" },
+      { ranAt: "Jul 6, 2026 09:00", durationMinutes: 14, status: "success" },
+    ],
+    versions: [
+      { version: 2, createdAt: "Jul 11, 2026" },
+      { version: 1, createdAt: "Jun 20, 2026" },
+    ],
   },
   {
     slug: "competitor-watch",
@@ -215,7 +395,14 @@ export const processes: Process[] = [
     schedule: "Mon + Thu 07:00",
     skillIds: ["collect-hiring-signals", "detect-tech-stack", "draft-outreach", "post-slack-digest"],
     connectorIds: ["hubspot", "lemlist", "slack"],
+    docSlugs: ["competitors", "icp", "outreach-playbook"],
     outputs: ["Campaign", "Slack recap"],
+    runs: [
+      { ranAt: "Jul 21, 2026 07:00", durationMinutes: 4, status: "success" },
+      { ranAt: "Jul 17, 2026 07:00", durationMinutes: 4, status: "success" },
+      { ranAt: "Jul 14, 2026 07:00", durationMinutes: 3, status: "success" },
+    ],
+    versions: [{ version: 1, createdAt: "May 30, 2026" }],
   },
   {
     slug: "churn-alerts",
@@ -227,7 +414,17 @@ export const processes: Process[] = [
     schedule: "Daily 08:00",
     skillIds: ["pull-crm-records", "post-slack-digest"],
     connectorIds: ["zohoanalytics", "hubspot", "slack"],
+    docSlugs: ["glossary", "data-model", "people"],
     outputs: ["Slack alert"],
+    runs: [
+      { ranAt: "Jul 21, 2026 08:00", durationMinutes: 2, status: "success" },
+      { ranAt: "Jul 20, 2026 08:00", durationMinutes: 2, status: "success" },
+      { ranAt: "Jul 19, 2026 08:00", durationMinutes: 2, status: "success" },
+    ],
+    versions: [
+      { version: 2, createdAt: "Jul 5, 2026" },
+      { version: 1, createdAt: "Jun 8, 2026" },
+    ],
   },
   {
     slug: "workspace-health-check",
@@ -239,7 +436,18 @@ export const processes: Process[] = [
     schedule: "Daily 08:00",
     skillIds: ["post-slack-digest"],
     connectorIds: ["notion", "slack"],
+    docSlugs: ["connector-conventions", "agent-runbook", "security-posture"],
     outputs: ["Slack heartbeat"],
+    runs: [
+      { ranAt: "Jul 21, 2026 08:00", durationMinutes: 3, status: "success" },
+      { ranAt: "Jul 20, 2026 08:00", durationMinutes: 3, status: "success" },
+      { ranAt: "Jul 19, 2026 08:00", durationMinutes: 9, status: "failed" },
+    ],
+    versions: [
+      { version: 3, createdAt: "Jul 15, 2026" },
+      { version: 2, createdAt: "Jun 22, 2026" },
+      { version: 1, createdAt: "Jun 1, 2026" },
+    ],
   },
   {
     slug: "founder-content-drafts",
@@ -251,7 +459,10 @@ export const processes: Process[] = [
     schedule: null,
     skillIds: ["draft-outreach", "post-slack-digest"],
     connectorIds: ["slack"],
+    docSlugs: ["voice-guide", "overview"],
     outputs: ["Slack drafts"],
+    runs: [],
+    versions: [{ version: 1, createdAt: "Jul 19, 2026" }],
   },
   {
     slug: "invoice-sync",
@@ -263,7 +474,15 @@ export const processes: Process[] = [
     schedule: null,
     skillIds: ["pull-crm-records", "sync-crm"],
     connectorIds: ["hubspot"],
+    docSlugs: ["data-model", "reporting-stack"],
     outputs: ["Ledger updates"],
+    runs: [{ ranAt: "Mar 2, 2026 10:00", durationMinutes: 5, status: "success" }],
+    versions: [
+      { version: 4, createdAt: "Feb 20, 2026" },
+      { version: 3, createdAt: "Jan 12, 2026" },
+      { version: 2, createdAt: "Dec 3, 2025" },
+      { version: 1, createdAt: "Nov 8, 2025" },
+    ],
   },
 ];
 
@@ -1136,8 +1355,84 @@ export const getProcess = (slug: string) => processes.find((p) => p.slug === slu
 export const getSkill = (id: string) => skills.find((s) => s.id === id);
 export const getConnector = (id: string) => connectors.find((c) => c.id === id);
 
+// Maps a real tool identifier, as it appears verbatim in a doc/process body's
+// `code` spans (e.g. `mcp__folk-crm__create_person`), to the connector that
+// backs it. Explicit rather than pattern-matched on the tool name — MCP
+// namespaces (`folk-crm`) don't always match the connector id (`folk`), and
+// guessing wrong would silently mislink a tool to the wrong logo.
+const TOOL_CONNECTORS: Record<string, string> = {
+  "mcp__folk-crm__list_companies": "folk",
+  "mcp__folk-crm__get_company_context": "folk",
+  "mcp__folk-crm__search_people_by_email": "folk",
+  "mcp__folk-crm__create_person": "folk",
+  "mcp__folk-crm__bulk_add_to_group": "folk",
+  aiark_company_search: "aiark",
+  aiark_people_search: "aiark",
+  aiark_credits: "aiark",
+};
+
+// Identity color for a connector, scoped to the small set of connectors that
+// actually back a tool (not the full ~60-entry catalog): with only 9 colors
+// in the palette, indexing by position in the full catalog collides for any
+// two connectors 9 apart (e.g. folk and aiark did, both landing on teal) —
+// indexing within just the tool-backed connectors keeps every connector a
+// given process actually uses visually distinct for as long as that set
+// stays under 9, which is the case that matters here.
+const TOOL_BACKED_CONNECTOR_IDS = [...new Set(Object.values(TOOL_CONNECTORS))];
+
+export const connectorColor = (id: string) =>
+  LABEL_DOT_COLORS[
+    Math.max(0, TOOL_BACKED_CONNECTOR_IDS.indexOf(id)) % LABEL_DOT_COLORS.length
+  ];
+
+export const getConnectorForTool = (tool: string) => {
+  const connectorId = TOOL_CONNECTORS[tool];
+  return connectorId ? getConnector(connectorId) : undefined;
+};
+
+// Connectors and tools in the order the procedure actually calls them, not
+// the order they happen to be listed in connectorIds/tools — a connector's
+// slot is set by its first tool's position, so the panel always reads as "in
+// order of first use" even if those arrays get reordered independently.
+export const orderedConnectorsForProcess = (process: Process): Connector[] => {
+  const ordered = new Map<string, Connector>();
+  for (const tool of process.tools ?? []) {
+    const connector = getConnectorForTool(tool);
+    if (connector && !ordered.has(connector.id)) ordered.set(connector.id, connector);
+  }
+  // Connectors with no tool tying them to a specific step (e.g. one only
+  // used for a manual/UI action) keep connectorIds' order, after the ones
+  // usage already placed.
+  for (const id of process.connectorIds) {
+    if (!ordered.has(id)) {
+      const connector = getConnector(id);
+      if (connector) ordered.set(id, connector);
+    }
+  }
+  return [...ordered.values()];
+};
+
+export const toolsForConnector = (process: Process, connectorId: string): string[] =>
+  (process.tools ?? []).filter((tool) => getConnectorForTool(tool)?.id === connectorId);
+
 export const connectorUsage = (connectorId: string): Process[] =>
   processes.filter((p) => p.status !== "deprecated" && p.connectorIds.includes(connectorId));
+
+// Which docs point at this one. The Doc shape only stores outgoing links, so
+// backlinks are always a scan — cheap at this size, and it keeps a doc's own
+// record from having to be kept in sync with its referrers.
+export const backlinksFor = (slug: string): Doc[] =>
+  docs.filter((d) => d.slug !== slug && d.links.includes(slug));
+
+// Outgoing links, with slugs that have no doc preserved rather than dropped —
+// those are the unresolved links the graph draws as phantom nodes and the
+// links list marks "Not created yet".
+export const outgoingFor = (slug: string): { slug: string; doc: Doc | undefined }[] =>
+  (getDoc(slug)?.links ?? []).map((target) => ({ slug: target, doc: getDoc(target) }));
+
+// Processes that read this doc before they run.
+export const processesReading = (slug: string): Process[] =>
+  processes.filter((p) => p.status !== "deprecated" && p.docSlugs.includes(slug));
 
 // The only two people in this mock workspace — reused wherever a connector
 // needs an access-grant list, not a magic array inlined at the call site.

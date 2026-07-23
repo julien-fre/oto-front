@@ -2,12 +2,8 @@
 
 import type { ReactNode } from "react";
 import { ChevronRightIcon, DottedIcon, FolderIcon } from "@/components/icons";
-import { cn, focusRing } from "@/lib/cn";
+import { cn, focusRing, treeGuide } from "@/lib/cn";
 import { useSidebar } from "./sidebar-provider";
-
-// The vertical rule that shows which rows belong to the folder above them.
-// Shared by NavFolder and NavSection so every level of the tree lines up.
-export const treeGuide = "ml-3 border-l border-gray-5 pl-1";
 
 // A folder inside a section: click anywhere on the row to open or close it.
 // Unlike a section header it has no destination of its own — it is pure

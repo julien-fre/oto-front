@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { AppShell } from "@/components/shell/app-shell";
 import { AuthProvider } from "@/components/auth-provider";
 import { SidebarProvider } from "@/components/shell/sidebar-provider";
+import { VersionProvider } from "@/components/shell/version-provider";
 import {
   GROUPS_COOKIE,
   parseGroups,
@@ -11,6 +12,7 @@ import {
   SIDEBAR_COOKIE,
   WIDTH_COOKIE,
 } from "@/lib/sidebar-cookies";
+import { parseVersion, VERSION_COOKIE } from "@/lib/version-cookie";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,6 +38,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const defaultOpen = store.get(SIDEBAR_COOKIE)?.value !== "closed";
   const defaultExpanded = parseGroups(store.get(GROUPS_COOKIE)?.value);
   const defaultWidth = parseWidth(store.get(WIDTH_COOKIE)?.value);
+  const defaultVersion = parseVersion(store.get(VERSION_COOKIE)?.value);
 
   return (
     <html
@@ -49,7 +52,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             defaultExpanded={defaultExpanded}
             defaultWidth={defaultWidth}
           >
-            <AppShell>{children}</AppShell>
+            <VersionProvider defaultVersion={defaultVersion}>
+              <AppShell>{children}</AppShell>
+            </VersionProvider>
           </SidebarProvider>
         </AuthProvider>
       </body>

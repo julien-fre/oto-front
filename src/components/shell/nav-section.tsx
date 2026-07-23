@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { ChevronRightIcon, PlusIcon } from "@/components/icons";
-import { cn, focusRing } from "@/lib/cn";
-import { treeGuide } from "./nav-folder";
+import { cn, focusRing, treeGuide } from "@/lib/cn";
 import { useSidebar } from "./sidebar-provider";
 
 export function NavSection({

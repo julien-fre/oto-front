@@ -6,6 +6,7 @@ import { CommandPalette } from "./command-palette";
 import { Sidebar } from "./sidebar";
 import { useSidebar } from "./sidebar-provider";
 import { TopBar } from "./top-bar";
+import { VersionToggle } from "./version-toggle";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { open, consumeNavHandoff, mobileOpen, paletteOpen } = useSidebar();
@@ -31,7 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
       <div
         className={cn(
-          "flex min-w-0 flex-1 flex-col bg-background",
+          "relative flex min-h-0 min-w-0 flex-1 flex-col bg-background",
           "shell:m-2 shell:overflow-hidden shell:rounded-xl shell:border shell:border-border",
         )}
         inert={mobileOpen || paletteOpen}
@@ -40,6 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
       <CommandPalette />
+      <VersionToggle />
     </div>
   );
 }

@@ -49,7 +49,7 @@ export function TopBar() {
   const crumbs = crumbsFor(pathname);
 
   return (
-    <div className="flex h-10 shrink-0 items-center gap-1 px-2">
+    <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2">
       {/* Below the shell breakpoint this is the only way to reach the drawer,
           so it is always there; on desktop the docked sidebar carries its own
           collapse button, so it appears only while collapsed. */}
@@ -65,7 +65,7 @@ export function TopBar() {
       >
         <PanelLeftIcon />
       </button>
-      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1 px-1">
+      <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1 px-1">
         {crumbs.map((crumb, i) => {
           const last = i === crumbs.length - 1;
           return (
