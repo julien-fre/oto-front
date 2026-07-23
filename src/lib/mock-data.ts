@@ -1371,6 +1371,20 @@ const TOOL_CONNECTORS: Record<string, string> = {
   aiark_credits: "aiark",
 };
 
+// Identity color for a connector, scoped to the small set of connectors that
+// actually back a tool (not the full ~60-entry catalog): with only 9 colors
+// in the palette, indexing by position in the full catalog collides for any
+// two connectors 9 apart (e.g. folk and aiark did, both landing on teal) —
+// indexing within just the tool-backed connectors keeps every connector a
+// given process actually uses visually distinct for as long as that set
+// stays under 9, which is the case that matters here.
+const TOOL_BACKED_CONNECTOR_IDS = [...new Set(Object.values(TOOL_CONNECTORS))];
+
+export const connectorColor = (id: string) =>
+  LABEL_DOT_COLORS[
+    Math.max(0, TOOL_BACKED_CONNECTOR_IDS.indexOf(id)) % LABEL_DOT_COLORS.length
+  ];
+
 export const getConnectorForTool = (tool: string) => {
   const connectorId = TOOL_CONNECTORS[tool];
   return connectorId ? getConnector(connectorId) : undefined;
