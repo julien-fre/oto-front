@@ -13,7 +13,7 @@ export function connectorStatusKey(connector: Connector): ConnectorStatusKey {
 export const statusLabels: Record<ConnectorStatusKey, string> = {
   active: "Active",
   paused: "Paused",
-  not_selected: "Not installed",
+  not_selected: "Inactive",
 };
 
 export const statusPillClassName: Record<ConnectorStatusKey, string> = {
