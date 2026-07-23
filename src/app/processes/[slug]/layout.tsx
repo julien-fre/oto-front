@@ -3,7 +3,6 @@ import { ConnectorLogo } from "@/components/connector-logo";
 import { ProcessStatusToggle } from "@/components/process-status-toggle";
 import { ProcessTabs } from "@/components/process-tabs";
 import { ToolReference } from "@/components/tool-reference";
-import { cn, focusRing } from "@/lib/cn";
 import {
   connectorColor,
   getSkill,
@@ -29,15 +28,6 @@ export default async function ProcessLayout(props: LayoutProps<"/processes/[slug
         <ProcessTabs slug={slug} />
         <div className="ml-auto flex shrink-0 items-center gap-3">
           <ProcessStatusToggle key={`status-${slug}`} initialActive={process.status === "active"} />
-          <button
-            type="button"
-            className={cn(
-              "flex h-7 shrink-0 items-center rounded-full border border-border px-3 text-button text-muted transition-colors duration-100 hover:bg-interactive-hovered hover:text-gray-12 motion-reduce:transition-none",
-              focusRing,
-            )}
-          >
-            Share
-          </button>
         </div>
       </div>
 
