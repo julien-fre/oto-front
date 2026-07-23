@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import { cookies } from "next/headers";
 import { AppShell } from "@/components/shell/app-shell";
+import { AuthProvider } from "@/components/auth-provider";
 import { SidebarProvider } from "@/components/shell/sidebar-provider";
 import {
   GROUPS_COOKIE,
@@ -42,13 +43,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <SidebarProvider
-          defaultOpen={defaultOpen}
-          defaultExpanded={defaultExpanded}
-          defaultWidth={defaultWidth}
-        >
-          <AppShell>{children}</AppShell>
-        </SidebarProvider>
+        <AuthProvider>
+          <SidebarProvider
+            defaultOpen={defaultOpen}
+            defaultExpanded={defaultExpanded}
+            defaultWidth={defaultWidth}
+          >
+            <AppShell>{children}</AppShell>
+          </SidebarProvider>
+        </AuthProvider>
       </body>
     </html>
   );
