@@ -74,7 +74,12 @@ export function OrgSwitcherMenu() {
         <div
           role="menu"
           aria-label="Organizations"
-          className="absolute left-0 top-full z-20 mt-1 max-h-64 w-64 animate-panel-in overflow-y-auto rounded-lg border border-border bg-background py-1 shadow-dropdown motion-reduce:animate-none"
+          // Sized to the header row's own inner width (this container's 100%
+          // plus the gap + collapse button it doesn't include), not a fixed
+          // w-64 — the sidebar/peek/drawer frames all clip overflow (down to
+          // MIN_SIDEBAR_WIDTH=200px), so a wider fixed panel got cut off
+          // instead of just spilling over.
+          className="absolute left-0 top-full z-20 mt-1 max-h-64 w-[calc(100%+2rem)] animate-panel-in overflow-y-auto rounded-lg border border-border bg-background py-1 shadow-dropdown motion-reduce:animate-none"
         >
           {state.kind === "loading" && (
             <p className="px-3 py-2 text-caption text-muted">Loading…</p>
@@ -99,7 +104,7 @@ export function OrgSwitcherMenu() {
                         disabled={switching?.status === "pending"}
                         onClick={() => handleSwitch(org.id)}
                         className={cn(
-                          "h-7 shrink-0 rounded-full border border-border px-3 text-button text-gray-12 transition-colors duration-100 hover:bg-gray-2 disabled:opacity-40 motion-reduce:transition-none",
+                          "h-6 shrink-0 rounded-full border border-border px-2 text-caption text-gray-12 transition-colors duration-100 hover:bg-gray-2 disabled:opacity-40 motion-reduce:transition-none",
                           focusRing,
                         )}
                       >
