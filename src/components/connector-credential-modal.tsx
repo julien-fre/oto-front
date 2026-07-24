@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ScopePicker } from "@/components/scope-picker";
 import { XIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
-import type { MeInfo } from "@/lib/connectors-api";
 import type { Connector, CredentialField } from "@/lib/mock-data";
-import { availableScopesFor, type Scope } from "@/lib/scope";
+import type { Scope } from "@/lib/scope";
 
 // Mock-data fallback when a connector has no real credentialFields (only
 // populated for connectors fetched from the backend) — a guess, not
@@ -32,15 +30,17 @@ function guessFieldsFor(secretKind: string): CredentialField[] {
 export function ConnectorCredentialModal({
   connector,
   open,
+  scope,
   hasCredential,
-  meInfo,
   onClose,
   onSave,
 }: {
   connector: Connector;
   open: boolean;
+  // Which level this modal instance targets — chosen by the caller (the
+  // access dropdown row clicked), not picked inside the modal.
+  scope: Scope;
   hasCredential: boolean;
-  meInfo: MeInfo;
   onClose: () => void;
   // Populated only for kinds oto-front actually persists (api_key,
   // basic_auth, fields) — keyed by each field's real `name`. cookie/oauth
@@ -51,8 +51,6 @@ export function ConnectorCredentialModal({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scope, setScope] = useState<Scope>("member");
-  const availableScopes = availableScopesFor(connector, meInfo);
 
   useEffect(() => {
     if (!open) return;
@@ -72,6 +70,9 @@ export function ConnectorCredentialModal({
   const fields = connector.credentialFields?.length
     ? connector.credentialFields
     : guessFieldsFor(connector.secretKind);
+  // hasCredential reflects whichever scope this modal instance targets —
+  // the caller (the access dropdown) already knows that per-scope state
+  // from providerStatus, so the modal just renders it.
   const title = hasCredential ? `Update ${connector.name}` : `Connect ${connector.name}`;
 
   async function handleSave(values?: Record<string, string>) {
@@ -111,12 +112,6 @@ export function ConnectorCredentialModal({
             <XIcon />
           </button>
         </div>
-
-        {availableScopes.length > 1 && (
-          <div className="mt-3">
-            <ScopePicker scopes={availableScopes} value={scope} onChange={setScope} />
-          </div>
-        )}
 
         <div className="mt-4 flex flex-col gap-3">
           {connector.secretKind === "oauth" ? (

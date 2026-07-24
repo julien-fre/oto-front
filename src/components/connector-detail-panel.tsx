@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ConnectorAccessPicker } from "@/components/connector-access-picker";
 import { ConnectorCredentialModal } from "@/components/connector-credential-modal";
 import { ConnectorFederatedAccess } from "@/components/connector-federated-access";
 import { ConnectorLogo } from "@/components/connector-logo";
@@ -25,38 +26,8 @@ import {
   type MeInfo,
 } from "@/lib/connectors-api";
 import type { Connector } from "@/lib/mock-data";
-import type { Scope } from "@/lib/scope";
+import { isScopeConfigured, type Scope } from "@/lib/scope";
 import { disableTool, enableTool, namespaceOfTool, type Tool } from "@/lib/tools-api";
-
-const linkClassName =
-  "text-gray-11 underline decoration-gray-7 underline-offset-2 hover:text-gray-12";
-
-// Beyond the member-scope Connect/Update button (credentialConfigured), tell
-// the user WHOSE key is actually resolving — the cascade (access.py::
-// walk_cascade) can silently satisfy a connector via a team/org/platform key
-// the member never configured themselves.
-function sharingLineFor(
-  status: Connector["providerStatus"],
-  meInfo: MeInfo,
-): string | null {
-  if (!status) return null;
-  switch (status.mode) {
-    case "org":
-      return `Resolved via ${meInfo.activeOrgName ?? "your org"}'s shared key`;
-    case "group":
-      return `Resolved via ${meInfo.activeGroupName ?? "your team"}'s shared key`;
-    case "platform":
-      return status.platform_key_label
-        ? `Using oto's shared key (${status.platform_key_label})`
-        : "Using oto's shared key";
-    case "forbidden":
-      return status.team_key_group
-        ? `A shared key exists in "${status.team_key_group.name}" — switch to that team to use it.`
-        : null;
-    default:
-      return null;
-  }
-}
 
 type Tab = "tools" | "team";
 const tabOrder: Tab[] = ["tools", "team"];
@@ -121,24 +92,30 @@ export function ConnectorDetailPanel({
   const [statusPending, setStatusPending] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
-  const [credentialModalOpen, setCredentialModalOpen] = useState(false);
-  const [sessionConnectOpen, setSessionConnectOpen] = useState(false);
-  const [disconnectError, setDisconnectError] = useState<string | null>(null);
-  const [removeSharedError, setRemoveSharedError] = useState<string | null>(null);
+  const [credentialModal, setCredentialModal] = useState<{ scope: Scope } | null>(null);
+  const [sessionConnect, setSessionConnect] = useState<{ scope: Scope } | null>(null);
+  const [removingScope, setRemovingScope] = useState<Scope | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const [toolPending, setToolPending] = useState<Record<string, boolean>>({});
   const [toolError, setToolError] = useState<Record<string, string>>({});
 
-  // Clearing an org/group-shared credential reuses the same generic vault
-  // clear (DELETE /api/settings/api-keys/{name}?scope=…) that session
-  // connectors already use — no separate delete route for keyed connectors.
-  async function removeSharedSecret(scope: "org" | "group") {
+  // One clear path for every scope, both connector mechanisms — the
+  // generic vault clear (DELETE /api/settings/api-keys/{name}?scope=…)
+  // works for keyed AND session/cookie connectors alike (confirmed:
+  // api_key_clear doesn't gate on secret_kind). Always refetch after: which
+  // rung now wins (providerStatus.mode) can shift in ways not worth
+  // re-deriving client-side.
+  async function removeAccess(scope: Scope) {
     if (!connector) return;
-    setRemoveSharedError(null);
+    setRemovingScope(scope);
+    setRemoveError(null);
     try {
       await deleteConnectorCredential(connector.id, scope);
       onRefetch();
     } catch (err) {
-      setRemoveSharedError(err instanceof Error ? err.message : "Failed to remove.");
+      setRemoveError(err instanceof Error ? err.message : "Failed to remove.");
+    } finally {
+      setRemovingScope(null);
     }
   }
 
@@ -178,13 +155,10 @@ export function ConnectorDetailPanel({
 
   if (!connector) return null;
   const status = connector.status;
-  const hasCredential = connector.credentialConfigured ?? false;
   const showPublisher =
     connector.publisher && connector.publisher.toLowerCase() !== connector.name.toLowerCase();
   const kind = connKind(connector);
   const connectorTools = tools.filter((t) => connector.namespaces.includes(namespaceOfTool(t.name)));
-  const sharingLine =
-    kind === "key" || kind === "session" ? sharingLineFor(connector.providerStatus, meInfo) : null;
 
   return (
     <>
@@ -277,70 +251,18 @@ export function ConnectorDetailPanel({
               ) : kind === "google" || kind === "unipile" ? (
                 <span className="text-caption text-muted">Not supported in oto-front yet</span>
               ) : (
-                <div className="flex items-center gap-3">
-                  {kind === "session" && hasCredential && (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        setDisconnectError(null);
-                        try {
-                          await deleteConnectorCredential(connector.id);
-                          onUpdateConnector(connector.id, { credentialConfigured: false });
-                        } catch (err) {
-                          setDisconnectError(
-                            err instanceof Error ? err.message : "Failed to disconnect.",
-                          );
-                        }
-                      }}
-                      className={cn("text-caption", linkClassName, focusRing)}
-                    >
-                      Disconnect
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      kind === "session" ? setSessionConnectOpen(true) : setCredentialModalOpen(true)
-                    }
-                    className={cn(
-                      "h-7 rounded-full px-3 text-button",
-                      hasCredential
-                        ? "border border-border text-gray-12 hover:bg-gray-3"
-                        : "bg-gray-12 text-background hover:opacity-90",
-                      focusRing,
-                    )}
-                  >
-                    {hasCredential ? "Update" : "Connect"}
-                  </button>
-                </div>
+                <ConnectorAccessPicker
+                  connector={connector}
+                  meInfo={meInfo}
+                  removingScope={removingScope}
+                  removeError={removeError}
+                  onConfigure={(scope) =>
+                    kind === "session" ? setSessionConnect({ scope }) : setCredentialModal({ scope })
+                  }
+                  onRemove={(scope) => void removeAccess(scope)}
+                />
               )}
             </div>
-            {sharingLine && <p className="mt-1 text-caption text-muted">{sharingLine}</p>}
-            {(kind === "key" || kind === "session") && (
-              <div className="mt-1 flex items-center gap-3">
-                {connector.providerStatus?.org_secret_configured && meInfo.orgRole === "org_admin" && (
-                  <button
-                    type="button"
-                    onClick={() => void removeSharedSecret("org")}
-                    className={cn("text-caption", linkClassName, focusRing)}
-                  >
-                    Remove org key
-                  </button>
-                )}
-                {connector.providerStatus?.group_secret_configured &&
-                  meInfo.groupRole === "group_admin" && (
-                    <button
-                      type="button"
-                      onClick={() => void removeSharedSecret("group")}
-                      className={cn("text-caption", linkClassName, focusRing)}
-                    >
-                      Remove team key
-                    </button>
-                  )}
-              </div>
-            )}
-            {removeSharedError && <p className="mt-1 text-caption text-red-11">{removeSharedError}</p>}
-            {disconnectError && <p className="mt-1 text-caption text-red-11">{disconnectError}</p>}
           </div>
 
           <div className="mt-6 flex items-center gap-1 border-b border-border">
@@ -407,10 +329,12 @@ export function ConnectorDetailPanel({
 
       <ConnectorCredentialModal
         connector={connector}
-        open={credentialModalOpen}
-        hasCredential={hasCredential}
-        meInfo={meInfo}
-        onClose={() => setCredentialModalOpen(false)}
+        open={credentialModal != null}
+        scope={credentialModal?.scope ?? "member"}
+        hasCredential={
+          credentialModal ? isScopeConfigured(connector.providerStatus, credentialModal.scope) : false
+        }
+        onClose={() => setCredentialModal(null)}
         onSave={async (fields, scope: Scope) => {
           if (["api_key", "basic_auth", "fields"].includes(connector.secretKind) && fields) {
             const fieldCount = connector.credentialFields?.length ?? 1;
@@ -422,32 +346,21 @@ export function ConnectorDetailPanel({
               await setGroupSecret(meInfo.activeGroupId, connector.id, fieldCount, fields);
             }
           }
-          if (scope === "member") {
-            onUpdateConnector(connector.id, { credentialConfigured: true });
-          } else {
-            // Org/group secret doesn't necessarily flip MY OWN
-            // credentialConfigured — refetch for truthful cascade state.
-            onRefetch();
-          }
-          setCredentialModalOpen(false);
+          // Which rung now wins can shift regardless of scope — refetch for
+          // truthful providerStatus rather than hand-rolling the cascade.
+          onRefetch();
+          setCredentialModal(null);
         }}
       />
 
-      {sessionConnectOpen && (
+      {sessionConnect && (
         <ConnectorSessionConnect
           connector={connector}
-          meInfo={meInfo}
-          onClose={() => setSessionConnectOpen(false)}
-          onConnected={(scope) => {
-            if (scope === "member") {
-              onUpdateConnector(connector.id, { credentialConfigured: true });
-            } else {
-              // Org/group scope changes someone else's cascade rung, not
-              // necessarily this member's own credentialConfigured flag —
-              // refetch rather than hand-roll the cascade client-side.
-              onRefetch();
-            }
-            setSessionConnectOpen(false);
+          scope={sessionConnect.scope}
+          onClose={() => setSessionConnect(null)}
+          onConnected={() => {
+            onRefetch();
+            setSessionConnect(null);
           }}
         />
       )}

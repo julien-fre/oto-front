@@ -21,3 +21,13 @@ export function availableScopesFor(connector: Connector, meInfo: MeInfo): Scope[
   const canOrg = shareable && meInfo.orgRole === "org_admin";
   return ["member", ...(canGroup ? (["group"] as const) : []), ...(canOrg ? (["org"] as const) : [])];
 }
+
+// Whether `scope` has a credential/session configured, per providerStatus —
+// computed regardless of which rung actually wins the cascade (access.py::
+// status_for walks the whole cascade for status, not just the winner).
+export function isScopeConfigured(status: Connector["providerStatus"], scope: Scope): boolean {
+  if (!status) return false;
+  if (scope === "member") return Boolean(status.user_key_configured) || status.session_set_at != null;
+  if (scope === "group") return Boolean(status.group_secret_configured);
+  return Boolean(status.org_secret_configured);
+}
