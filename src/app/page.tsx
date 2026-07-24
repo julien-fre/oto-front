@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connectors, docs, processes } from "@/lib/mock-data";
+import { connectors, processes } from "@/lib/mock-data";
 
 // title.template in the root layout does not apply to the same segment's page
 export const metadata: Metadata = { title: { absolute: "Home · Oto" } };
@@ -15,7 +15,7 @@ export default function HomePage() {
     {
       href: "/knowledge",
       title: "Knowledge",
-      summary: `${docs.length} docs · last verified Jul 20, 2026`,
+      summary: "The org’s shared pages, live from the knowledge base",
     },
     {
       href: "/processes",

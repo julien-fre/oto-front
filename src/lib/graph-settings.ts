@@ -1,8 +1,9 @@
 // The graph's settings, and how they survive a reload.
 //
 // Obsidian persists the same set to .obsidian/graph.json, debounced 2000ms;
-// this mirrors that, using the cookie mechanism the sidebar already
-// established so state is server-rendered and there is no flash on load.
+// this mirrors that. Since the section went live (auth-gated, client-only
+// rendering) the cookie is read back on the client — there is no server pass
+// to keep in sync, and the graph mounts behind a loading state anyway.
 //
 // One deliberate difference: Obsidian also serialises the live zoom level on
 // every zoom action, which is a well-documented cause of sync churn there. We
@@ -13,7 +14,10 @@ import { DEFAULT_DISPLAY } from "@/components/knowledge/graph-canvas";
 import { DEFAULT_FORCES, type ForceParams } from "./force-graph";
 import { DEFAULT_FILTERS, type ColorBy, type GraphFilters } from "./knowledge-graph";
 
-export const GRAPH_COOKIE = "oto_graph";
+// v2: the flag slots changed meaning when the section went live (processes/
+// connectors toggles became notes/sources) — a new key lets stale cookies
+// fall back to the new defaults instead of silently hiding sources.
+export const GRAPH_COOKIE = "oto_graph_v2";
 export const DOC_RAIL_COOKIE = "oto_doc_rail"; // "open" | "closed"
 export const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
@@ -29,7 +33,7 @@ export const DEFAULT_SETTINGS: GraphSettings = {
   // reopening the graph still filtered by a query you typed last week is
   // disorienting, and it is the one setting with no visible control at rest.
   filters: DEFAULT_FILTERS,
-  colorBy: "folder",
+  colorBy: "branch",
   display: DEFAULT_DISPLAY,
   forces: DEFAULT_FORCES,
 };
@@ -37,9 +41,10 @@ export const DEFAULT_SETTINGS: GraphSettings = {
 // Persisted as a compact positional string rather than JSON: it rides in a
 // cookie on every request, and JSON in a cookie needs escaping that Next's
 // store then has to undo.
+// Positional flags, in panel order.
 const ORDER = [
-  "showProcesses",
-  "showConnectors",
+  "showNotes",
+  "showSources",
   "showOrphans",
   "hideUnresolved",
   "arrows",
@@ -58,12 +63,12 @@ function num(value: string | undefined, fallback: number, min: number, max: numb
   return Math.min(max, Math.max(min, parsed));
 }
 
-const COLOR_BY_VALUES: ColorBy[] = ["folder", "type", "owner", "freshness", "none"];
+const COLOR_BY_VALUES: ColorBy[] = ["branch", "type", "freshness", "none"];
 
 export function serializeSettings(settings: GraphSettings): string {
   const flags = [
-    settings.filters.showProcesses,
-    settings.filters.showConnectors,
+    settings.filters.showNotes,
+    settings.filters.showSources,
     settings.filters.showOrphans,
     settings.filters.hideUnresolved,
     settings.display.arrows,
@@ -97,8 +102,8 @@ export function parseSettings(raw: string | undefined): GraphSettings {
   return {
     filters: {
       query: "",
-      showProcesses: bool(at("showProcesses"), DEFAULT_FILTERS.showProcesses),
-      showConnectors: bool(at("showConnectors"), DEFAULT_FILTERS.showConnectors),
+      showNotes: bool(at("showNotes"), DEFAULT_FILTERS.showNotes),
+      showSources: bool(at("showSources"), DEFAULT_FILTERS.showSources),
       showOrphans: bool(at("showOrphans"), DEFAULT_FILTERS.showOrphans),
       hideUnresolved: bool(at("hideUnresolved"), DEFAULT_FILTERS.hideUnresolved),
     },

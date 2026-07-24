@@ -3,6 +3,7 @@ import { Geist_Mono, Inter } from "next/font/google";
 import { cookies } from "next/headers";
 import { AppShell } from "@/components/shell/app-shell";
 import { AuthProvider } from "@/components/auth-provider";
+import { KnowledgeProvider } from "@/components/knowledge/knowledge-provider";
 import { SidebarProvider } from "@/components/shell/sidebar-provider";
 import { VersionProvider } from "@/components/shell/version-provider";
 import {
@@ -47,15 +48,20 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full">
         <AuthProvider>
-          <SidebarProvider
-            defaultOpen={defaultOpen}
-            defaultExpanded={defaultExpanded}
-            defaultWidth={defaultWidth}
-          >
-            <VersionProvider defaultVersion={defaultVersion}>
-              <AppShell>{children}</AppShell>
-            </VersionProvider>
-          </SidebarProvider>
+          {/* Knowledge sits above the shell because the sidebar and top bar
+              render the doc tree and breadcrumbs from it — see the note in
+              knowledge-provider.tsx. */}
+          <KnowledgeProvider>
+            <SidebarProvider
+              defaultOpen={defaultOpen}
+              defaultExpanded={defaultExpanded}
+              defaultWidth={defaultWidth}
+            >
+              <VersionProvider defaultVersion={defaultVersion}>
+                <AppShell>{children}</AppShell>
+              </VersionProvider>
+            </SidebarProvider>
+          </KnowledgeProvider>
         </AuthProvider>
       </body>
     </html>
