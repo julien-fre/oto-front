@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ScopePicker } from "@/components/scope-picker";
 import { XIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
+import type { MeInfo } from "@/lib/connectors-api";
 import type { Connector, CredentialField } from "@/lib/mock-data";
+import { availableScopesFor, type Scope } from "@/lib/scope";
 
 // Mock-data fallback when a connector has no real credentialFields (only
 // populated for connectors fetched from the backend) — a guess, not
@@ -30,22 +33,26 @@ export function ConnectorCredentialModal({
   connector,
   open,
   hasCredential,
+  meInfo,
   onClose,
   onSave,
 }: {
   connector: Connector;
   open: boolean;
   hasCredential: boolean;
+  meInfo: MeInfo;
   onClose: () => void;
   // Populated only for kinds oto-front actually persists (api_key,
   // basic_auth, fields) — keyed by each field's real `name`. cookie/oauth
   // call onSave() with nothing, since neither is a form post.
-  onSave: (fields?: Record<string, string>) => void | Promise<void>;
+  onSave: (fields: Record<string, string> | undefined, scope: Scope) => void | Promise<void>;
 }) {
   const firstFieldRef = useRef<HTMLInputElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scope, setScope] = useState<Scope>("member");
+  const availableScopes = availableScopesFor(connector, meInfo);
 
   useEffect(() => {
     if (!open) return;
@@ -71,7 +78,7 @@ export function ConnectorCredentialModal({
     setSaving(true);
     setError(null);
     try {
-      await onSave(values);
+      await onSave(values, scope);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save.");
       setSaving(false);
@@ -104,6 +111,12 @@ export function ConnectorCredentialModal({
             <XIcon />
           </button>
         </div>
+
+        {availableScopes.length > 1 && (
+          <div className="mt-3">
+            <ScopePicker scopes={availableScopes} value={scope} onChange={setScope} />
+          </div>
+        )}
 
         <div className="mt-4 flex flex-col gap-3">
           {connector.secretKind === "oauth" ? (

@@ -3,8 +3,10 @@
 import { useMemo, useRef, useState } from "react";
 import { SearchIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
+import type { MeInfo } from "@/lib/connectors-api";
 import { connectorStatusKey, statusLabels, type ConnectorStatusKey } from "@/lib/connector-status";
 import type { Connector } from "@/lib/mock-data";
+import type { Tool } from "@/lib/tools-api";
 import { ConnectorDetailPanel } from "./connector-detail-panel";
 import { ConnectorKanbanBoard } from "./connector-kanban-board";
 
@@ -18,20 +20,35 @@ function groupByCategory(connectors: Connector[]) {
   return [...byCategory.entries()].sort((a, b) => b[1].length - a[1].length);
 }
 
-export function ConnectorsBrowser({ connectors }: { connectors: Connector[] }) {
+export function ConnectorsBrowser({
+  connectors,
+  onUpdateConnector,
+  tools,
+  onUpdateTool,
+  meInfo,
+  onRefetch,
+}: {
+  connectors: Connector[];
+  onUpdateConnector: (id: string, patch: Partial<Connector>) => void;
+  tools: Tool[];
+  onUpdateTool: (name: string, patch: Partial<Tool>) => void;
+  meInfo: MeInfo;
+  onRefetch: () => void;
+}) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<ConnectorStatusKey | null>("active");
-  const [selected, setSelected] = useState<Connector | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
+  const selected = selectedId ? (connectors.find((c) => c.id === selectedId) ?? null) : null;
 
   function openConnector(connector: Connector) {
     restoreFocusRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setSelected(connector);
+    setSelectedId(connector.id);
   }
 
   function closePanel() {
-    setSelected(null);
+    setSelectedId(null);
     restoreFocusRef.current?.focus();
   }
 
@@ -112,7 +129,16 @@ export function ConnectorsBrowser({ connectors }: { connectors: Connector[] }) {
           </div>
         )}
       </div>
-      <ConnectorDetailPanel key={selected?.id ?? "closed"} connector={selected} onClose={closePanel} />
+      <ConnectorDetailPanel
+        key={selected?.id ?? "closed"}
+        connector={selected}
+        onClose={closePanel}
+        onUpdateConnector={onUpdateConnector}
+        tools={tools}
+        onUpdateTool={onUpdateTool}
+        meInfo={meInfo}
+        onRefetch={onRefetch}
+      />
     </>
   );
 }

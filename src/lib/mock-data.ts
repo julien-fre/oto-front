@@ -6,6 +6,7 @@
 // connectors carry Oto's real installation state. Dates are preformatted
 // display strings so server and client can never disagree on locale.
 
+import type { ProviderStatus } from "@/lib/connectors-api";
 import { knowledgeDocs } from "./knowledge-docs";
 
 // Identity colors for nested items — the sidebar marks each doc/process with a
@@ -145,6 +146,18 @@ export type Connector = {
   // is Google-only today. Optional: absent for mock-only connectors.
   authMethod?: string;
   authCardinality?: string;
+  // Real ADR-0011 credential presence — from /api/me's providers[name]
+  // (access.py::status_for), NOT derived from `status`: install/activation
+  // and credential-configured are orthogonal (mirrors oto-dashboard's
+  // ProviderStatus / connectorVerdict.ts split). Optional: absent for
+  // mock-only connectors.
+  credentialConfigured?: boolean;
+  // Full raw /api/me provider status (mode + per-level flags) — lets the
+  // panel show WHO a credential resolves through (personal/team/org/
+  // platform), separate from credentialConfigured which only drives the
+  // member-scope Connect/Update button. Optional: absent for mock-only
+  // connectors.
+  providerStatus?: ProviderStatus;
 };
 
 // The corpus itself lives in its own file purely for size — this stays the
