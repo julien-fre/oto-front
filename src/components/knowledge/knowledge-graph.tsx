@@ -6,27 +6,36 @@ import { cn, focusRing } from "@/lib/cn";
 import {
   DEFAULT_SETTINGS,
   GRAPH_COOKIE,
+  parseSettings,
   serializeSettings,
   writeGraphCookie,
   type GraphSettings,
 } from "@/lib/graph-settings";
+import type { KnowledgeBase } from "@/lib/knowledge-api";
 import { buildGraph, colorLegend, type GraphNode, type NodeKind } from "@/lib/knowledge-graph";
-import { LABEL_DOT_COLORS } from "@/lib/mock-data";
 import { GraphCanvas } from "./graph-canvas";
 import { GraphSettingsPanel } from "./graph-settings-panel";
 import { NodePreview } from "./node-preview";
 
-export function KnowledgeGraph({ initialSettings }: { initialSettings: GraphSettings }) {
-  const [settings, setSettings] = useState<GraphSettings>(initialSettings);
+function readSettingsCookie(): GraphSettings {
+  const raw = document.cookie
+    .split("; ")
+    .find((c) => c.startsWith(`${GRAPH_COOKIE}=`))
+    ?.slice(GRAPH_COOKIE.length + 1);
+  return parseSettings(raw);
+}
+
+export function KnowledgeGraph({ kb }: { kb: KnowledgeBase }) {
+  // Cookie read client-side: this component only ever renders after auth and
+  // the KB fetch resolve, which is strictly client territory — there is no
+  // server pass to keep in sync, so no hydration hazard.
+  const [settings, setSettings] = useState<GraphSettings>(readSettingsCookie);
   const [panelOpen, setPanelOpen] = useState(false);
   const [hovered, setHovered] = useState<{ node: GraphNode; x: number; y: number } | null>(null);
   const [resetKey, setResetKey] = useState(0);
 
-  const graph = useMemo(() => buildGraph(settings.filters), [settings.filters]);
-  const legend = useMemo(
-    () => colorLegend(settings.colorBy, LABEL_DOT_COLORS),
-    [settings.colorBy],
-  );
+  const graph = useMemo(() => buildGraph(kb, settings.filters), [kb, settings.filters]);
+  const legend = useMemo(() => colorLegend(settings.colorBy, kb), [settings.colorBy, kb]);
 
   // Persist debounced, the way Obsidian does — a slider drag would otherwise
   // write a cookie on every animation frame.
@@ -41,18 +50,18 @@ export function KnowledgeGraph({ initialSettings }: { initialSettings: GraphSett
     };
   }, [settings]);
 
-  const docCount = graph.nodes.filter((n) => n.kind === "doc").length;
+  const docCount = graph.nodes.filter((n) => n.kind !== "unresolved").length;
 
   // What each node *shape* means — the counterpart to the colour legend. Only
-  // the kinds actually on screen appear, and the swatch mirrors the node shape
+  // the kinds actually on screen appear; the swatch mirrors the node shape
   // (circle / square / ring) in neutral grey, so shape reads as its own signal
   // independent of whatever "Color by" is set to.
   const shapes = useMemo(() => {
     const present = new Set(graph.nodes.map((n) => n.kind));
     const order: { kind: NodeKind; label: string }[] = [
       { kind: "doc", label: "Doc" },
-      { kind: "process", label: "Process" },
-      { kind: "connector", label: "Connector" },
+      { kind: "note", label: "Note" },
+      { kind: "source", label: "Source" },
     ];
     return order.filter((s) => present.has(s.kind));
   }, [graph]);
@@ -73,10 +82,6 @@ export function KnowledgeGraph({ initialSettings }: { initialSettings: GraphSett
 
       {hovered && <NodePreview node={hovered.node} x={hovered.x} y={hovered.y} />}
 
-      {/* Controls float over the canvas at the top right, where Obsidian puts
-          its cog. The panel anchors under it — Obsidian never documents which
-          corner its own box uses, so this is a free choice, and hanging it off
-          the trigger is the one that needs no explanation. */}
       <div className="pointer-events-none absolute right-2 top-2 flex flex-col items-end gap-2">
         <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-border bg-background p-0.5 shadow-dropdown">
           <button
@@ -130,7 +135,7 @@ export function KnowledgeGraph({ initialSettings }: { initialSettings: GraphSett
           graph encoding meaning in colour alone. */}
       <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-background/80 px-2 py-1">
         <span className="text-caption text-muted">
-          {docCount} doc{docCount === 1 ? "" : "s"} · {graph.edges.length} links
+          {docCount} page{docCount === 1 ? "" : "s"} · {graph.edges.length} link{graph.edges.length === 1 ? "" : "s"}
         </span>
         {shapes.map((shape) => (
           <span key={shape.kind} className="flex items-center gap-1.5">
@@ -138,9 +143,9 @@ export function KnowledgeGraph({ initialSettings }: { initialSettings: GraphSett
               aria-hidden="true"
               className={cn(
                 "size-2 shrink-0",
-                shape.kind === "process" && "rounded-[2px] bg-gray-9",
+                shape.kind === "note" && "rounded-[2px] bg-gray-9",
                 shape.kind === "doc" && "rounded-full bg-gray-9",
-                shape.kind === "connector" && "rounded-full border-[1.5px] border-gray-9",
+                shape.kind === "source" && "rounded-full border-[1.5px] border-gray-9",
               )}
             />
             <span className="text-caption text-muted">{shape.label}</span>
@@ -163,7 +168,9 @@ export function KnowledgeGraph({ initialSettings }: { initialSettings: GraphSett
 
       {graph.nodes.length === 0 && (
         <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-body text-muted">
-          Nothing matches these filters.
+          {kb.docs.length === 0
+            ? "No pages yet. Ask Oto to capture what it learns — pages land here, in the org’s knowledge base."
+            : "Nothing matches these filters."}
         </p>
       )}
     </div>

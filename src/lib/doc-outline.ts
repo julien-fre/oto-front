@@ -1,6 +1,6 @@
-// Heading anchors, in a module with no "use client" directive: the document
-// body renders on the server, and any client code linking to a heading needs
-// the same id or the anchor misses.
+// Heading anchors, shared so every consumer of a heading id computes the
+// same slug — the renderer stamps them, anything linking to a section reads
+// them.
 
 /** Stable anchor id for a heading. */
 export function headingId(text: string) {

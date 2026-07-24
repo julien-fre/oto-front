@@ -3,11 +3,11 @@ import { CircleAlertIcon } from "@/components/icons";
 import { ToolReference } from "@/components/tool-reference";
 import { cn } from "@/lib/cn";
 import { headingId } from "@/lib/doc-outline";
-import type { Block, Span } from "@/lib/mock-data";
-import { DocReference } from "./doc-reference";
+import type { Block, Span } from "@/lib/doc-blocks";
+import { DocReference, StubReference } from "./doc-reference";
 
-// A server component: the document renders on the server, and only the inline
-// reference (which owns a hover preview) reaches for the client.
+// Pure rendering over the typed block model (produced from the backend's
+// markdown by src/lib/markdown.ts).
 //
 // Headings come out at text-body-medium rather than a larger size — hierarchy
 // on a page comes from weight, colour and spacing, never from introducing a
@@ -25,7 +25,8 @@ export function DocSpans({ spans }: { spans: Span[] }) {
 
 function renderSpan(span: Span) {
   if (typeof span === "string") return span;
-  if ("ref" in span) return <DocReference slug={span.ref} />;
+  if ("ref" in span) return <DocReference docId={span.ref} />;
+  if ("stub" in span) return <StubReference title={span.stub} />;
   if ("strong" in span) return <strong className="font-medium text-gray-12">{span.strong}</strong>;
   if ("em" in span) return <em className="italic">{span.em}</em>;
   if ("code" in span) return <ToolReference tool={span.code} />;
