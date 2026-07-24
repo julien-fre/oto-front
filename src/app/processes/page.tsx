@@ -1,16 +1,73 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { processes } from "@/lib/mock-data";
+import { useAuth } from "@/components/auth-provider";
+import { fetchProcesses, type ProcessSummary } from "@/lib/processes-api";
 
-export const metadata: Metadata = { title: "Processes" };
-
-const statusLabel = { active: "Active", draft: "Draft", deprecated: "Deprecated" } as const;
+type LoadState =
+  | { kind: "loading" }
+  | { kind: "error"; message: string }
+  | { kind: "ready"; processes: ProcessSummary[] };
 
 export default function ProcessesPage() {
+  const { isAuthenticated, isLoading: authLoading, login } = useAuth();
+  const [state, setState] = useState<LoadState>({ kind: "loading" });
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+    let cancelled = false;
+    fetchProcesses()
+      .then((processes) => {
+        if (!cancelled) setState({ kind: "ready", processes });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setState({
+            kind: "error",
+            message: err instanceof Error ? err.message : "Failed to load processes.",
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isAuthenticated]);
+
+  if (authLoading) {
+    return <Centered>Loading…</Centered>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Centered>
+        <button
+          type="button"
+          onClick={() => login("/processes")}
+          className="rounded-full bg-gray-12 px-4 py-2 text-button text-gray-1"
+        >
+          Sign in to see your processes
+        </button>
+      </Centered>
+    );
+  }
+
+  if (state.kind === "loading") {
+    return <Centered>Loading processes…</Centered>;
+  }
+
+  if (state.kind === "error") {
+    return <Centered>Couldn&apos;t load processes — {state.message}</Centered>;
+  }
+
+  if (state.processes.length === 0) {
+    return <Centered>No named procedures yet for this org.</Centered>;
+  }
+
   return (
     <div className="px-12 py-6">
       <div className="divide-y divide-gray-5 border-y border-gray-5">
-        {processes.map((process) => (
+        {state.processes.map((process) => (
           <Link
             key={process.slug}
             href={`/processes/${process.slug}`}
@@ -22,18 +79,17 @@ export default function ProcessesPage() {
                 {process.description}
               </span>
             </span>
-            <span
-              className={
-                process.status === "active"
-                  ? "w-16 shrink-0 text-right text-caption text-green-11"
-                  : "w-16 shrink-0 text-right text-caption text-muted"
-              }
-            >
-              {statusLabel[process.status]}
-            </span>
           </Link>
         ))}
       </div>
+    </div>
+  );
+}
+
+function Centered({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-12 py-6 text-body text-muted">
+      {children}
     </div>
   );
 }

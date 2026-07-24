@@ -89,324 +89,22 @@ export type Connector = {
   authCardinality?: string;
 };
 
-export const skills: Skill[] = [
-  { id: "pull-crm-records", name: "Pull CRM records", description: "Read companies, contacts, and deals from the CRM." },
-  { id: "enrich-contact", name: "Enrich contact details", description: "Waterfall enrichment for emails, phones, and firmographics." },
-  { id: "score-icp-fit", name: "Score ICP fit", description: "Grade an account against the ICP criteria in the glossary." },
-  { id: "collect-hiring-signals", name: "Collect hiring signals", description: "Scan job postings for buying signals." },
-  { id: "detect-tech-stack", name: "Detect tech stack", description: "Identify the tools a company already runs." },
-  { id: "draft-outreach", name: "Draft outreach copy", description: "Write personalized sequences in the company voice." },
-  { id: "sync-crm", name: "Write back to CRM", description: "Push enriched fields and notes to the CRM." },
-  { id: "post-slack-digest", name: "Post Slack digest", description: "Publish a fixed-format recap to a channel." },
-  { id: "extract-call-feedback", name: "Extract call feedback", description: "Pull bugs, feature asks, and sentiment from call transcripts." },
-  { id: "render-report", name: "Render branded report", description: "Assemble data into the branded report template." },
-  { id: "file-tickets", name: "File tickets", description: "Open tracked issues from confirmed items." },
-];
+// Empty — "skills" was always an invented abstraction with no backend basis
+// (a real doctrine has no notion of composable skills), only ever populated
+// for the mock processes that are now gone. Kept (rather than deleted) only
+// because the out-of-scope Flow tab (src/app/processes/[slug]/flow/page.tsx)
+// still reads it — see the scope boundary in the connect-processes-to-backend
+// plan.
+export const skills: Skill[] = [];
 
-export const processes: Process[] = [
-  // Real doctrine pulled from Oto (org "Atlas", oto_procedure slug
-  // "vendor-contact-sourcing", v3) — everything else in this array is
-  // invented. Oto's doctrine model has no run-history field, so that stays
-  // empty until Oto exposes it.
-  {
-    slug: "vendor-contact-sourcing",
-    name: "Sourcing contacts éditeurs (AI Ark → Folk → Lemlist)",
-    description:
-      "Extrait du groupe Folk « Providers » les entreprises avec un avis mais sans contact lié, trouve leur CEO / Head of Marketing / Head of Branding via AI Ark, les repousse dans Folk sous ce même groupe, puis les pousse vers la campagne Lemlist dédiée à l'outreach vendors.",
-    status: "active",
-    owner: "Julien",
-    skillIds: [],
-    tools: [
-      "mcp__folk-crm__list_companies",
-      "mcp__folk-crm__get_company_context",
-      "aiark_company_search",
-      "aiark_people_search",
-      "mcp__folk-crm__search_people_by_email",
-      "mcp__folk-crm__create_person",
-      "mcp__folk-crm__bulk_add_to_group",
-      "aiark_credits",
-    ],
-    connectorIds: ["folk", "aiark", "lemlist"],
-    runs: [],
-    versions: [
-      { version: 3, createdAt: "Jul 22, 2026" },
-      { version: 2, createdAt: "Jul 22, 2026" },
-      { version: 1, createdAt: "Jul 22, 2026" },
-    ],
-    body: [
-      { type: "h2", text: "Contexte" },
-      {
-        type: "p",
-        spans: [
-          "Cette procédure est le sous-bloc « recherche de contacts » du volet éditeurs de la stratégie d'outreach Softatlas (voir page KB « Outreach — Acquisition utilisateurs & éditeurs »). Elle part des entreprises déjà présentes dans Folk (groupe « Providers ») qui ont un avis sur Softatlas mais aucun contact rattaché, et en ressort des contacts qualifiés repoussés dans Folk et Lemlist.",
-        ],
-      },
-      { type: "h2", text: "Rôles ciblés (par entreprise, jusqu'à 3 contacts)" },
-      {
-        type: "ol",
-        items: [
-          [
-            { strong: "CEO / Fondateur" },
-            " — seniority ",
-            { code: "founder" },
-            "/",
-            { code: "owner" },
-            "/",
-            { code: "c_suite" },
-            ", title contient CEO / Chief Executive Officer / Founder.",
-          ],
-          [
-            { strong: "Head of Marketing" },
-            " — department ",
-            { code: "marketing" },
-            ", seniority ",
-            { code: "head" },
-            "/",
-            { code: "director" },
-            "/",
-            { code: "vp" },
-            ".",
-          ],
-          [
-            { strong: "Head of Branding / Brand" },
-            " — title contient brand / branding / brand marketing.",
-          ],
-        ],
-      },
-      { type: "h2", text: "Étapes" },
-      { type: "h3", text: "1. Extraire les entreprises cibles (Folk)" },
-      {
-        type: "p",
-        spans: [
-          "Dans le groupe Folk ",
-          { strong: "« Providers »" },
-          ", lister les entreprises (",
-          { code: "mcp__folk-crm__list_companies" },
-          ", filtré sur ce groupe) puis ne garder que celles qui :",
-        ],
-      },
-      {
-        type: "ul",
-        items: [
-          ["ont un ", { strong: "avis" }, " (review) renseigné sur Softatlas (champ personnalisé avis/reviews) ;"],
-          [
-            { strong: "n'ont aucune personne (contact) rattachée" },
-            " dans Folk (vérifier via ",
-            { code: "mcp__folk-crm__get_company_context" },
-            " — liste des personnes liées vide).",
-          ],
-        ],
-      },
-      {
-        type: "p",
-        spans: ["C'est cette liste filtrée (entreprise + domaine/site) qui alimente les étapes suivantes."],
-      },
-      { type: "h3", text: "2. Rechercher les contacts (AI Ark)" },
-      { type: "p", spans: ["Pour chaque entreprise filtrée à l'étape 1, et pour chaque rôle ciblé :"] },
-      {
-        type: "ul",
-        items: [
-          [
-            { code: "aiark_company_search" },
-            ' avec account: {"domain": {"any": {"include": ["<domaine>"]}}} pour confirmer/normaliser l\'entité si besoin.',
-          ],
-          [
-            { code: "aiark_people_search" },
-            " avec ",
-            { code: "account" },
-            " filtré sur le domaine et ",
-            { code: "contact" },
-            " filtré selon le rôle (cf. section rôles ciblés).",
-          ],
-        ],
-      },
-      {
-        type: "p",
-        spans: ["Garder le meilleur match par rôle (le plus senior / le plus proche du titre recherché)."],
-      },
-      { type: "h3", text: "3. Vérifier les doublons" },
-      {
-        type: "p",
-        spans: [
-          { code: "mcp__folk-crm__search_people_by_email" },
-          " sur chaque contact obtenu — ne pas recréer une fiche Folk existante, la mettre à jour si besoin (poste, entreprise).",
-        ],
-      },
-      { type: "h3", text: "4. Repousser vers Folk, sous le groupe Providers" },
-      {
-        type: "ul",
-        items: [
-          [
-            { code: "mcp__folk-crm__create_person" },
-            " pour chaque nouveau contact (prénom, nom, email, poste), ",
-            { strong: "rattaché à l'entreprise déjà présente dans Folk" },
-            ".",
-          ],
-          [
-            { code: "mcp__folk-crm__bulk_add_to_group" },
-            " pour ajouter ces contacts au ",
-            { strong: "même groupe « Providers »" },
-            " que leur entreprise (pas un groupe séparé) — les contacts apparaissent ainsi directement rattachés à leur fiche entreprise dans ce groupe.",
-          ],
-        ],
-      },
-      { type: "h3", text: "5. Pousser vers Lemlist" },
-      {
-        type: "p",
-        spans: [
-          "Ajouter les contacts (email, prénom, nom, société, poste) à la campagne Lemlist dédiée « Outreach Vendors — Claim & Review ». Si le connecteur Lemlist n'est pas encore activé sur l'org, l'activer d'abord (",
-          { code: "oto_connector" },
-          " op=select, name=lemlist).",
-        ],
-      },
-      { type: "h2", text: "Garde-fous" },
-      {
-        type: "ul",
-        items: [
-          [
-            "Ne traiter que les entreprises du groupe « Providers » ayant un avis ET aucune personne liée — ne pas re-traiter celles qui ont déjà au moins un contact.",
-          ],
-          ["Ne jamais pousser un contact deux fois dans la même campagne Lemlist."],
-          ["Vérifier les crédits disponibles (", { code: "aiark_credits" }, ") avant un run sur un grand nombre d'entreprises."],
-          [
-            "Une entreprise sans contact trouvé pour un rôle donné est journalisée comme « non trouvé », pas bloquant pour les autres rôles.",
-          ],
-        ],
-      },
-      { type: "h2", text: "Sortie attendue" },
-      {
-        type: "p",
-        spans: [
-          "Pour chaque run : nombre d'entreprises traitées (groupe Providers, avis sans contact), contacts trouvés par rôle, contacts créés/mis à jour dans Folk sous le groupe Providers, contacts poussés dans la campagne Lemlist.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "lead-list-builder",
-    name: "Lead list builder",
-    description: "Build a scored, enriched cold list from a plain-language brief and push it to a campaign.",
-    status: "active",
-    owner: "Alessandro",
-    skillIds: [
-      "enrich-contact",
-      "score-icp-fit",
-      "collect-hiring-signals",
-      "detect-tech-stack",
-      "draft-outreach",
-      "sync-crm",
-    ],
-    connectorIds: ["hubspot", "lemlist", "slack"],
-    runs: [
-      { ranAt: "Jul 21, 2026 14:32", durationMinutes: 6, status: "success" },
-      { ranAt: "Jul 18, 2026 09:14", durationMinutes: 7, status: "success" },
-      { ranAt: "Jul 14, 2026 16:05", durationMinutes: 5, status: "success" },
-      { ranAt: "Jul 9, 2026 11:47", durationMinutes: 8, status: "failed" },
-    ],
-    versions: [
-      { version: 3, createdAt: "Jul 18, 2026" },
-      { version: 2, createdAt: "Jul 2, 2026" },
-      { version: 1, createdAt: "Jun 14, 2026" },
-    ],
-  },
-  {
-    slug: "weekly-feedback-report",
-    name: "Weekly feedback report",
-    description: "Turn the week's call transcripts into a report, tickets, and a Slack recap.",
-    status: "active",
-    owner: "Julien",
-    skillIds: ["extract-call-feedback", "render-report", "post-slack-digest", "file-tickets"],
-    connectorIds: ["notion", "slack"],
-    runs: [
-      { ranAt: "Jul 20, 2026 09:00", durationMinutes: 12, status: "success" },
-      { ranAt: "Jul 13, 2026 09:00", durationMinutes: 11, status: "success" },
-      { ranAt: "Jul 6, 2026 09:00", durationMinutes: 14, status: "success" },
-    ],
-    versions: [
-      { version: 2, createdAt: "Jul 11, 2026" },
-      { version: 1, createdAt: "Jun 20, 2026" },
-    ],
-  },
-  {
-    slug: "competitor-watch",
-    name: "Competitor watch",
-    description: "Monitor competitor accounts for engagement signals and start outreach.",
-    status: "active",
-    owner: "Alessandro",
-    skillIds: ["collect-hiring-signals", "detect-tech-stack", "draft-outreach", "post-slack-digest"],
-    connectorIds: ["hubspot", "lemlist", "slack"],
-    runs: [
-      { ranAt: "Jul 21, 2026 07:00", durationMinutes: 4, status: "success" },
-      { ranAt: "Jul 17, 2026 07:00", durationMinutes: 4, status: "success" },
-      { ranAt: "Jul 14, 2026 07:00", durationMinutes: 3, status: "success" },
-    ],
-    versions: [{ version: 1, createdAt: "May 30, 2026" }],
-  },
-  {
-    slug: "churn-alerts",
-    name: "Churn alerts",
-    description: "Watch product usage for drop-off patterns and alert the account owner.",
-    status: "active",
-    owner: "Julien",
-    skillIds: ["pull-crm-records", "post-slack-digest"],
-    connectorIds: ["zohoanalytics", "hubspot", "slack"],
-    runs: [
-      { ranAt: "Jul 21, 2026 08:00", durationMinutes: 2, status: "success" },
-      { ranAt: "Jul 20, 2026 08:00", durationMinutes: 2, status: "success" },
-      { ranAt: "Jul 19, 2026 08:00", durationMinutes: 2, status: "success" },
-    ],
-    versions: [
-      { version: 2, createdAt: "Jul 5, 2026" },
-      { version: 1, createdAt: "Jun 8, 2026" },
-    ],
-  },
-  {
-    slug: "workspace-health-check",
-    name: "Workspace health check",
-    description: "Probe every connector, flag stale docs, and report drift before it bites.",
-    status: "active",
-    owner: "Alessandro",
-    skillIds: ["post-slack-digest"],
-    connectorIds: ["notion", "slack"],
-    runs: [
-      { ranAt: "Jul 21, 2026 08:00", durationMinutes: 3, status: "success" },
-      { ranAt: "Jul 20, 2026 08:00", durationMinutes: 3, status: "success" },
-      { ranAt: "Jul 19, 2026 08:00", durationMinutes: 9, status: "failed" },
-    ],
-    versions: [
-      { version: 3, createdAt: "Jul 15, 2026" },
-      { version: 2, createdAt: "Jun 22, 2026" },
-      { version: 1, createdAt: "Jun 1, 2026" },
-    ],
-  },
-  {
-    slug: "founder-content-drafts",
-    name: "Founder content drafts",
-    description: "Draft daily social posts in the founder's voice for review by emoji.",
-    status: "draft",
-    owner: "Julien",
-    skillIds: ["draft-outreach", "post-slack-digest"],
-    connectorIds: ["slack"],
-    runs: [],
-    versions: [{ version: 1, createdAt: "Jul 19, 2026" }],
-  },
-  {
-    slug: "invoice-sync",
-    name: "Invoice sync",
-    description: "Reconcile invoices between billing and accounting, flag mismatches.",
-    status: "deprecated",
-    owner: "Alessandro",
-    skillIds: ["pull-crm-records", "sync-crm"],
-    connectorIds: ["hubspot"],
-    runs: [{ ranAt: "Mar 2, 2026 10:00", durationMinutes: 5, status: "success" }],
-    versions: [
-      { version: 4, createdAt: "Feb 20, 2026" },
-      { version: 3, createdAt: "Jan 12, 2026" },
-      { version: 2, createdAt: "Dec 3, 2025" },
-      { version: 1, createdAt: "Nov 8, 2025" },
-    ],
-  },
-];
+// Empty: processes now come live from src/lib/processes-api.ts
+// (GET /api/me/instructions) instead of invented mock entries. The type +
+// helpers below stay so their few remaining consumers (sidebar nav, the
+// knowledge graph's process nodes, connector "Used by") keep working — they
+// just render their existing empty state until a later pass gives them a
+// live source too (there is no REST path today for the doctrine↔connector
+// link graph — see connect-processes-to-backend plan).
+export const processes: Process[] = [];
 
 export const connectors: Connector[] = [
   {
@@ -1285,6 +983,11 @@ const TOOL_CONNECTORS: Record<string, string> = {
 // stays under 9, which is the case that matters here.
 const TOOL_BACKED_CONNECTOR_IDS = [...new Set(Object.values(TOOL_CONNECTORS))];
 
+// Exposed so processes-api.ts can scan a live doctrine's raw body_md text for
+// these exact identifiers (detectTools) — one source of truth for "which tool
+// names we know how to map to a connector," instead of a second copy.
+export const KNOWN_TOOL_IDS = Object.keys(TOOL_CONNECTORS);
+
 export const connectorColor = (id: string) =>
   LABEL_DOT_COLORS[
     Math.max(0, TOOL_BACKED_CONNECTOR_IDS.indexOf(id)) % LABEL_DOT_COLORS.length
@@ -1299,7 +1002,9 @@ export const getConnectorForTool = (tool: string) => {
 // the order they happen to be listed in connectorIds/tools — a connector's
 // slot is set by its first tool's position, so the panel always reads as "in
 // order of first use" even if those arrays get reordered independently.
-export const orderedConnectorsForProcess = (process: Process): Connector[] => {
+export const orderedConnectorsForProcess = (
+  process: Pick<Process, "tools" | "connectorIds">,
+): Connector[] => {
   const ordered = new Map<string, Connector>();
   for (const tool of process.tools ?? []) {
     const connector = getConnectorForTool(tool);
@@ -1317,8 +1022,10 @@ export const orderedConnectorsForProcess = (process: Process): Connector[] => {
   return [...ordered.values()];
 };
 
-export const toolsForConnector = (process: Process, connectorId: string): string[] =>
-  (process.tools ?? []).filter((tool) => getConnectorForTool(tool)?.id === connectorId);
+export const toolsForConnector = (
+  process: Pick<Process, "tools">,
+  connectorId: string,
+): string[] => (process.tools ?? []).filter((tool) => getConnectorForTool(tool)?.id === connectorId);
 
 export const connectorUsage = (connectorId: string): Process[] =>
   processes.filter((p) => p.status !== "deprecated" && p.connectorIds.includes(connectorId));
