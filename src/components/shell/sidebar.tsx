@@ -16,7 +16,8 @@ import { OtoMark } from "@/components/oto-mark";
 import { cn, focusRing, treeGuide } from "@/lib/cn";
 import { useKnowledge } from "@/components/knowledge/knowledge-provider";
 import { docAccentColor, type KnowledgeBase, type KnowledgeDoc } from "@/lib/knowledge-api";
-import { processColor, processes } from "@/lib/mock-data";
+import { useProcesses } from "@/components/processes-provider";
+import { processAccentColor } from "@/lib/processes-api";
 import { NavLink } from "./nav-link";
 import { NavSection } from "./nav-section";
 import { SidebarRail } from "./sidebar-rail";
@@ -62,6 +63,31 @@ function KnowledgeBranch({
             </div>
           )}
         </div>
+      ))}
+    </>
+  );
+}
+
+// Same "nothing while signed out or loading" affordance as KnowledgeTree —
+// the section link alone carries the page while there's nothing live to show
+// yet. No deprecated/status filter: a real doctrine has no status field.
+function ProcessesTree() {
+  const { state } = useProcesses();
+  if (state.kind !== "ready") return null;
+  return (
+    <>
+      {state.processes.map((process) => (
+        <NavLink
+          key={process.slug}
+          href={`/processes/${process.slug}`}
+          label={process.name}
+          icon={
+            <DottedIcon color={processAccentColor(process.slug)}>
+              <SettingsIcon />
+            </DottedIcon>
+          }
+          indent
+        />
       ))}
     </>
   );
@@ -136,21 +162,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" | "peek" })
             icon={<WorkflowIcon />}
             addLabel="New process"
           >
-            {processes
-              .filter((process) => process.status !== "deprecated")
-              .map((process) => (
-                <NavLink
-                  key={process.slug}
-                  href={`/processes/${process.slug}`}
-                  label={process.name}
-                  icon={
-                    <DottedIcon color={processColor(process.slug)}>
-                      <SettingsIcon />
-                    </DottedIcon>
-                  }
-                  indent
-                />
-              ))}
+            <ProcessesTree />
           </NavSection>
           <NavLink href="/connectors" label="Connectors" icon={<PlugIcon />} />
         </div>

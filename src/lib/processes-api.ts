@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { LABEL_DOT_COLORS } from "@/lib/label-colors";
 import { KNOWN_TOOL_IDS } from "@/lib/mock-data";
 
 // Shape of oto-mcp's GET /api/me/instructions (oto-backend/oto_mcp/capabilities/
@@ -35,6 +36,17 @@ export async function fetchProcesses(): Promise<ProcessSummary[]> {
     "/api/me/instructions",
   );
   return instructions.map(mapSummary);
+}
+
+// Identity color for a process — stable per slug (a simple string hash, same
+// idea as knowledge-model.ts's docAccentColor keying off a doc's numeric id),
+// not per position in the fetched list. Position-based coloring broke once
+// processes went live: the list can reorder or grow between loads, which
+// would repaint an unrelated process a different color on every refresh.
+export function processAccentColor(slug: string): string {
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) hash = (hash * 31 + slug.charCodeAt(i)) | 0;
+  return LABEL_DOT_COLORS[Math.abs(hash) % LABEL_DOT_COLORS.length];
 }
 
 // Shape of GET /api/me/instructions/{slug} (_instruction_get) — no

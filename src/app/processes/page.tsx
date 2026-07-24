@@ -1,38 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
-import { fetchProcesses, type ProcessSummary } from "@/lib/processes-api";
-
-type LoadState =
-  | { kind: "loading" }
-  | { kind: "error"; message: string }
-  | { kind: "ready"; processes: ProcessSummary[] };
+import { useProcesses } from "@/components/processes-provider";
+import { cn, focusRing } from "@/lib/cn";
 
 export default function ProcessesPage() {
   const { isAuthenticated, isLoading: authLoading, login } = useAuth();
-  const [state, setState] = useState<LoadState>({ kind: "loading" });
-
-  useEffect(() => {
-    if (authLoading || !isAuthenticated) return;
-    let cancelled = false;
-    fetchProcesses()
-      .then((processes) => {
-        if (!cancelled) setState({ kind: "ready", processes });
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setState({
-            kind: "error",
-            message: err instanceof Error ? err.message : "Failed to load processes.",
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, isAuthenticated]);
+  const { state, refresh } = useProcesses();
 
   if (authLoading) {
     return <Centered>Loading…</Centered>;
@@ -52,12 +27,26 @@ export default function ProcessesPage() {
     );
   }
 
-  if (state.kind === "loading") {
+  if (state.kind === "idle" || state.kind === "loading") {
     return <Centered>Loading processes…</Centered>;
   }
 
   if (state.kind === "error") {
-    return <Centered>Couldn&apos;t load processes — {state.message}</Centered>;
+    return (
+      <Centered>
+        <p>Couldn&apos;t load processes — {state.message}</p>
+        <button
+          type="button"
+          onClick={refresh}
+          className={cn(
+            "h-7 rounded-full border border-border px-3 text-button text-gray-12 hover:bg-gray-2",
+            focusRing,
+          )}
+        >
+          Try again
+        </button>
+      </Centered>
+    );
   }
 
   if (state.processes.length === 0) {
