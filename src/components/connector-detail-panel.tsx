@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { ConnectorCredentialModal } from "@/components/connector-credential-modal";
 import { ConnectorFederatedAccess } from "@/components/connector-federated-access";
 import { ConnectorLogo } from "@/components/connector-logo";
 import { ConnectorSessionConnect } from "@/components/connector-session-connect";
-import { Toggle } from "@/components/toggle";
 import { ChevronRightIcon, XIcon } from "@/components/icons";
+import { Toggle } from "@/components/toggle";
 import { cn, focusRing } from "@/lib/cn";
 import { connKind } from "@/lib/connector-kind";
 import {
@@ -20,18 +19,50 @@ import {
   pauseConnector,
   selectConnector,
   setConnectorCredential,
+  setGroupSecret,
+  setOrgSecret,
   unselectConnector,
+  type MeInfo,
 } from "@/lib/connectors-api";
-import { connectorUsage, team, teams, type Connector } from "@/lib/mock-data";
+import type { Connector } from "@/lib/mock-data";
+import type { Scope } from "@/lib/scope";
+import { disableTool, enableTool, namespaceOfTool, type Tool } from "@/lib/tools-api";
 
 const linkClassName =
   "text-gray-11 underline decoration-gray-7 underline-offset-2 hover:text-gray-12";
 
-type Tab = "team" | "tools";
-const tabOrder: Tab[] = ["team", "tools"];
+// Beyond the member-scope Connect/Update button (credentialConfigured), tell
+// the user WHOSE key is actually resolving — the cascade (access.py::
+// walk_cascade) can silently satisfy a connector via a team/org/platform key
+// the member never configured themselves.
+function sharingLineFor(
+  status: Connector["providerStatus"],
+  meInfo: MeInfo,
+): string | null {
+  if (!status) return null;
+  switch (status.mode) {
+    case "org":
+      return `Resolved via ${meInfo.activeOrgName ?? "your org"}'s shared key`;
+    case "group":
+      return `Resolved via ${meInfo.activeGroupName ?? "your team"}'s shared key`;
+    case "platform":
+      return status.platform_key_label
+        ? `Using oto's shared key (${status.platform_key_label})`
+        : "Using oto's shared key";
+    case "forbidden":
+      return status.team_key_group
+        ? `A shared key exists in "${status.team_key_group.name}" — switch to that team to use it.`
+        : null;
+    default:
+      return null;
+  }
+}
+
+type Tab = "tools" | "team";
+const tabOrder: Tab[] = ["tools", "team"];
 const tabLabels: Record<Tab, string> = {
-  team: "Team Access",
   tools: "Tools",
+  team: "Team Access",
 };
 
 // What clicking the status pill offers, given the current status.
@@ -53,16 +84,24 @@ function statusActions(
   return [{ label: "Activate", next: "active" }];
 }
 
-type Sharing = "private" | "shared";
-
 export function ConnectorDetailPanel({
   connector,
   onClose,
+  onUpdateConnector,
+  tools,
+  onUpdateTool,
+  meInfo,
+  onRefetch,
 }: {
   connector: Connector | null;
   onClose: () => void;
+  onUpdateConnector: (id: string, patch: Partial<Connector>) => void;
+  tools: Tool[];
+  onUpdateTool: (name: string, patch: Partial<Tool>) => void;
+  meInfo: MeInfo;
+  onRefetch: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>("team");
+  const [tab, setTab] = useState<Tab>("tools");
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const open = connector != null;
 
@@ -79,33 +118,47 @@ export function ConnectorDetailPanel({
     return () => window.removeEventListener("keydown", onKeydown);
   }, [open, onClose]);
 
-  // Local, visual-only state — no backend to persist to. Resets per
-  // connector for free since the panel remounts via key={connector.id} in
-  // connectors-browser.tsx.
-  const [status, setStatus] = useState<ConnectorStatusKey>(
-    () => connector?.status ?? "not_selected",
-  );
   const [statusPending, setStatusPending] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
-  const [hasCredential, setHasCredential] = useState(
-    () => (connector?.status ?? "not_selected") !== "not_selected",
-  );
   const [credentialModalOpen, setCredentialModalOpen] = useState(false);
   const [sessionConnectOpen, setSessionConnectOpen] = useState(false);
   const [disconnectError, setDisconnectError] = useState<string | null>(null);
-  const [enabledNamespaces, setEnabledNamespaces] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries((connector?.namespaces ?? []).map((ns) => [ns, true])),
-  );
-  const [sharing, setSharing] = useState<Sharing>(() =>
-    (connector?.authModes ?? []).includes("byo_org") ? "shared" : "private",
-  );
-  const [enabledTeams, setEnabledTeams] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(teams.map((t) => [t.name, t.members.includes(connector?.owner ?? "")])),
-  );
-  const [enabledIndividuals, setEnabledIndividuals] = useState<Record<string, boolean>>(() => ({
-    [connector?.owner ?? ""]: true,
-  }));
+  const [removeSharedError, setRemoveSharedError] = useState<string | null>(null);
+  const [toolPending, setToolPending] = useState<Record<string, boolean>>({});
+  const [toolError, setToolError] = useState<Record<string, string>>({});
+
+  // Clearing an org/group-shared credential reuses the same generic vault
+  // clear (DELETE /api/settings/api-keys/{name}?scope=…) that session
+  // connectors already use — no separate delete route for keyed connectors.
+  async function removeSharedSecret(scope: "org" | "group") {
+    if (!connector) return;
+    setRemoveSharedError(null);
+    try {
+      await deleteConnectorCredential(connector.id, scope);
+      onRefetch();
+    } catch (err) {
+      setRemoveSharedError(err instanceof Error ? err.message : "Failed to remove.");
+    }
+  }
+
+  async function toggleTool(tool: Tool) {
+    if (toolPending[tool.name]) return;
+    setToolPending((prev) => ({ ...prev, [tool.name]: true }));
+    setToolError((prev) => ({ ...prev, [tool.name]: "" }));
+    try {
+      if (tool.enabled) await disableTool(tool.name);
+      else await enableTool(tool.name);
+      onUpdateTool(tool.name, { enabled: !tool.enabled });
+    } catch (err) {
+      setToolError((prev) => ({
+        ...prev,
+        [tool.name]: err instanceof Error ? err.message : "Failed to update tool.",
+      }));
+    } finally {
+      setToolPending((prev) => ({ ...prev, [tool.name]: false }));
+    }
+  }
 
   async function applyStatus(next: ConnectorStatusKey) {
     if (!connector) return;
@@ -115,7 +168,7 @@ export function ConnectorDetailPanel({
       if (next === "active") await selectConnector(connector.id);
       else if (next === "paused") await pauseConnector(connector.id);
       else await unselectConnector(connector.id);
-      setStatus(next);
+      onUpdateConnector(connector.id, { status: next });
     } catch (err) {
       setStatusError(err instanceof Error ? err.message : "Failed to update status.");
     } finally {
@@ -124,10 +177,14 @@ export function ConnectorDetailPanel({
   }
 
   if (!connector) return null;
-  const usage = connectorUsage(connector.id);
+  const status = connector.status;
+  const hasCredential = connector.credentialConfigured ?? false;
   const showPublisher =
     connector.publisher && connector.publisher.toLowerCase() !== connector.name.toLowerCase();
   const kind = connKind(connector);
+  const connectorTools = tools.filter((t) => connector.namespaces.includes(namespaceOfTool(t.name)));
+  const sharingLine =
+    kind === "key" || kind === "session" ? sharingLineFor(connector.providerStatus, meInfo) : null;
 
   return (
     <>
@@ -228,7 +285,7 @@ export function ConnectorDetailPanel({
                         setDisconnectError(null);
                         try {
                           await deleteConnectorCredential(connector.id);
-                          setHasCredential(false);
+                          onUpdateConnector(connector.id, { credentialConfigured: false });
                         } catch (err) {
                           setDisconnectError(
                             err instanceof Error ? err.message : "Failed to disconnect.",
@@ -258,32 +315,32 @@ export function ConnectorDetailPanel({
                 </div>
               )}
             </div>
-            {disconnectError && <p className="mt-1 text-caption text-red-11">{disconnectError}</p>}
-
-            <div className="mt-3 border-t border-border pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-body text-gray-12">Used by</span>
-                <span className="text-body text-gray-12">
-                  {usage.length === 0
-                    ? "No processes"
-                    : `${usage.length} process${usage.length === 1 ? "" : "es"}`}
-                </span>
+            {sharingLine && <p className="mt-1 text-caption text-muted">{sharingLine}</p>}
+            {(kind === "key" || kind === "session") && (
+              <div className="mt-1 flex items-center gap-3">
+                {connector.providerStatus?.org_secret_configured && meInfo.orgRole === "org_admin" && (
+                  <button
+                    type="button"
+                    onClick={() => void removeSharedSecret("org")}
+                    className={cn("text-caption", linkClassName, focusRing)}
+                  >
+                    Remove org key
+                  </button>
+                )}
+                {connector.providerStatus?.group_secret_configured &&
+                  meInfo.groupRole === "group_admin" && (
+                    <button
+                      type="button"
+                      onClick={() => void removeSharedSecret("group")}
+                      className={cn("text-caption", linkClassName, focusRing)}
+                    >
+                      Remove team key
+                    </button>
+                  )}
               </div>
-              {usage.length > 0 && (
-                <ul className="mt-2 flex flex-col gap-1">
-                  {usage.map((p) => (
-                    <li key={p.slug}>
-                      <Link
-                        href={`/processes/${p.slug}`}
-                        className={cn("text-body", linkClassName, focusRing)}
-                      >
-                        {p.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            )}
+            {removeSharedError && <p className="mt-1 text-caption text-red-11">{removeSharedError}</p>}
+            {disconnectError && <p className="mt-1 text-caption text-red-11">{disconnectError}</p>}
           </div>
 
           <div className="mt-6 flex items-center gap-1 border-b border-border">
@@ -307,160 +364,44 @@ export function ConnectorDetailPanel({
             ))}
           </div>
 
-          {tab === "team" &&
-            (connector.secretKind !== "none" ? (
-              <div className="mt-4 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    {(["private", "shared"] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setSharing(mode)}
-                        aria-pressed={sharing === mode}
-                        className={cn(
-                          "h-7 rounded-full px-3 text-button capitalize",
-                          sharing === mode
-                            ? "bg-interactive-checked text-gray-12"
-                            : "text-muted hover:bg-interactive-hovered",
-                          focusRing,
-                        )}
-                      >
-                        {mode}
-                      </button>
-                    ))}
-                  </div>
-                  {sharing === "shared" && (
-                    <div className="flex items-center gap-3 text-caption">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEnabledTeams(Object.fromEntries(teams.map((t) => [t.name, true])));
-                          setEnabledIndividuals(Object.fromEntries(team.map((p) => [p, true])));
-                        }}
-                        className={cn(linkClassName, focusRing)}
-                      >
-                        Enable all
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEnabledTeams(Object.fromEntries(teams.map((t) => [t.name, false])));
-                          setEnabledIndividuals(Object.fromEntries(team.map((p) => [p, false])));
-                        }}
-                        className={cn(linkClassName, focusRing)}
-                      >
-                        Disable all
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {sharing === "private" ? (
-                  <p className="text-caption text-muted">Only you can use this key.</p>
-                ) : (
-                  <>
-                    <div>
-                      <span className="text-body-medium text-gray-12">Teams</span>
-                      <ul className="mt-1 flex flex-col">
-                        {teams.map((t) => (
-                          <li
-                            key={t.name}
-                            className="flex items-center justify-between border-t border-border py-2 first:border-t-0"
-                          >
-                            <span className="text-body text-gray-12">{t.name}</span>
-                            <Toggle
-                              checked={enabledTeams[t.name] ?? false}
-                              onChange={() =>
-                                setEnabledTeams((prev) => ({ ...prev, [t.name]: !prev[t.name] }))
-                              }
-                              label={`Toggle team ${t.name}`}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <span className="text-body-medium text-gray-12">Individuals</span>
-                      <ul className="mt-1 flex flex-col">
-                        {team.map((person) => (
-                          <li
-                            key={person}
-                            className="flex items-center justify-between border-t border-border py-2 first:border-t-0"
-                          >
-                            <span className="text-body text-gray-12">{person}</span>
-                            <Toggle
-                              checked={enabledIndividuals[person] ?? false}
-                              onChange={() =>
-                                setEnabledIndividuals((prev) => ({
-                                  ...prev,
-                                  [person]: !prev[person],
-                                }))
-                              }
-                              label={`Toggle access for ${person}`}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : (
-              <p className="mt-4 text-caption text-muted">
-                No credential — nothing to scope access to.
-              </p>
-            ))}
-
           {tab === "tools" &&
-            (connector.namespaces.length > 0 ? (
-              <div className="mt-4 flex flex-col gap-3">
-                <div className="flex items-center gap-3 text-caption">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEnabledNamespaces(
-                        Object.fromEntries(connector.namespaces.map((ns) => [ns, true])),
-                      )
-                    }
-                    className={cn(linkClassName, focusRing)}
+            (connectorTools.length > 0 ? (
+              <ul className="mt-4 flex flex-col">
+                {connectorTools.map((tool) => (
+                  <li
+                    key={tool.name}
+                    className="flex flex-col gap-1 border-t border-border py-2 first:border-t-0"
                   >
-                    Enable all
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEnabledNamespaces(
-                        Object.fromEntries(connector.namespaces.map((ns) => [ns, false])),
-                      )
-                    }
-                    className={cn(linkClassName, focusRing)}
-                  >
-                    Disable all
-                  </button>
-                </div>
-                <ul className="flex flex-col">
-                  {connector.namespaces.map((ns) => (
-                    <li
-                      key={ns}
-                      className="flex items-center justify-between border-t border-border py-2 first:border-t-0"
-                    >
-                      <span className="text-body text-gray-12">{ns}</span>
-                      <Toggle
-                        checked={enabledNamespaces[ns]}
-                        onChange={() =>
-                          setEnabledNamespaces((prev) => ({ ...prev, [ns]: !prev[ns] }))
-                        }
-                        label={`Toggle ${ns}`}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <code className="text-body text-gray-12">{tool.name}</code>
+                        {tool.description && (
+                          <p className="mt-0.5 text-caption text-muted">{tool.description}</p>
+                        )}
+                      </div>
+                      {tool.protected ? (
+                        <span className="shrink-0 text-caption text-muted">Always on</span>
+                      ) : (
+                        <Toggle
+                          checked={tool.enabled}
+                          onChange={() => void toggleTool(tool)}
+                          label={`Toggle ${tool.name}`}
+                        />
+                      )}
+                    </div>
+                    {toolError[tool.name] && (
+                      <p className="text-caption text-red-11">{toolError[tool.name]}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
             ) : (
               <p className="mt-4 text-caption text-muted">No tools resolved for this connector.</p>
             ))}
+
+          {tab === "team" && (
+            <p className="mt-4 text-caption text-muted">Team-scoped access is coming soon.</p>
+          )}
         </div>
       </div>
 
@@ -468,12 +409,26 @@ export function ConnectorDetailPanel({
         connector={connector}
         open={credentialModalOpen}
         hasCredential={hasCredential}
+        meInfo={meInfo}
         onClose={() => setCredentialModalOpen(false)}
-        onSave={async (fields) => {
+        onSave={async (fields, scope: Scope) => {
           if (["api_key", "basic_auth", "fields"].includes(connector.secretKind) && fields) {
-            await setConnectorCredential(connector.id, fields);
+            const fieldCount = connector.credentialFields?.length ?? 1;
+            if (scope === "member") {
+              await setConnectorCredential(connector.id, fields);
+            } else if (scope === "org" && meInfo.activeOrgId != null) {
+              await setOrgSecret(meInfo.activeOrgId, connector.id, fieldCount, fields);
+            } else if (scope === "group" && meInfo.activeGroupId != null) {
+              await setGroupSecret(meInfo.activeGroupId, connector.id, fieldCount, fields);
+            }
           }
-          setHasCredential(true);
+          if (scope === "member") {
+            onUpdateConnector(connector.id, { credentialConfigured: true });
+          } else {
+            // Org/group secret doesn't necessarily flip MY OWN
+            // credentialConfigured — refetch for truthful cascade state.
+            onRefetch();
+          }
           setCredentialModalOpen(false);
         }}
       />
@@ -481,9 +436,17 @@ export function ConnectorDetailPanel({
       {sessionConnectOpen && (
         <ConnectorSessionConnect
           connector={connector}
+          meInfo={meInfo}
           onClose={() => setSessionConnectOpen(false)}
-          onConnected={() => {
-            setHasCredential(true);
+          onConnected={(scope) => {
+            if (scope === "member") {
+              onUpdateConnector(connector.id, { credentialConfigured: true });
+            } else {
+              // Org/group scope changes someone else's cascade rung, not
+              // necessarily this member's own credentialConfigured flag —
+              // refetch rather than hand-roll the cascade client-side.
+              onRefetch();
+            }
             setSessionConnectOpen(false);
           }}
         />

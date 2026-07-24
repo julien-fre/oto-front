@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ScopePicker } from "@/components/scope-picker";
 import { XIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
-import { finalizeConnectorSession, startConnectorSession } from "@/lib/connectors-api";
+import { finalizeConnectorSession, startConnectorSession, type MeInfo } from "@/lib/connectors-api";
 import type { Connector } from "@/lib/mock-data";
+import { availableScopesFor, type Scope } from "@/lib/scope";
 
 // Cookie secretKind (brevo, crunchbase, pennylaneged) — a hosted Browserbase
 // remote browser the user logs into via Live View, then a manual "Verify"
@@ -16,18 +18,22 @@ import type { Connector } from "@/lib/mock-data";
 // starts on mount, matching the dashboard's "reopen = new session" behavior.
 export function ConnectorSessionConnect({
   connector,
+  meInfo,
   onClose,
   onConnected,
 }: {
   connector: Connector;
+  meInfo: MeInfo;
   onClose: () => void;
-  onConnected: () => void;
+  onConnected: (scope: Scope) => void;
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [liveUrl, setLiveUrl] = useState<string | null>(null);
   const [ctx, setCtx] = useState<{ context_id: string; session_id: string } | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [scope, setScope] = useState<Scope>("member");
+  const availableScopes = availableScopesFor(connector, meInfo);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,9 +68,9 @@ export function ConnectorSessionConnect({
     setVerifying(true);
     setError(null);
     try {
-      const res = await finalizeConnectorSession(connector.id, ctx);
+      const res = await finalizeConnectorSession(connector.id, { ...ctx, scope });
       if (res.connected) {
-        onConnected();
+        onConnected(scope);
       } else {
         setError("Not connected yet — finish logging in, then try again.");
       }
@@ -98,6 +104,12 @@ export function ConnectorSessionConnect({
             <XIcon />
           </button>
         </div>
+
+        {availableScopes.length > 1 && (
+          <div className="flex shrink-0 items-center border-b border-border px-4 py-2">
+            <ScopePicker scopes={availableScopes} value={scope} onChange={setScope} />
+          </div>
+        )}
 
         <div className="relative flex-1 bg-gray-2">
           {loading && (
