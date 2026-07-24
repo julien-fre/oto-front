@@ -8,12 +8,18 @@
 // Edges are the resolved wikilinks, the same ones the backend keeps in
 // doc_links.
 
+import type { NodeShape } from "./graph";
 import { docAccentColor, type KnowledgeBase, type KnowledgeDoc } from "./knowledge-model";
 import { normalizeTitle } from "./markdown";
 
 export type NodeKind = "doc" | "note" | "source" | "unresolved";
 export type EdgeKind = "references";
 
+// Structurally assignable into graph.ts's wider Graph/GraphNode wherever a
+// value flows into GraphCanvas or the shared traversal helpers (neighborsOf,
+// describeNode, nodeWeight) — this domain keeps its own narrow types for its
+// own logic (nodeColor, colorLegend, buildGraph) rather than importing the
+// wide ones, so nothing here loses exhaustiveness checking.
 export type GraphNode = {
   id: string;
   kind: NodeKind;
@@ -27,6 +33,7 @@ export type GraphNode = {
   excerpt?: string;
   /** Hops from the center node. Only set by localGraph(). */
   ring?: number;
+  shape?: NodeShape;
 };
 
 export type GraphEdge = { source: string; target: string; kind: EdgeKind };
@@ -126,6 +133,13 @@ export const DEFAULT_FILTERS: GraphFilters = {
   hideUnresolved: false,
 };
 
+const SHAPE_BY_KIND: Record<NodeKind, NodeShape> = {
+  doc: "circle",
+  note: "square",
+  source: "ring",
+  unresolved: "circle",
+};
+
 function makeDocNode(doc: KnowledgeDoc, kb: KnowledgeBase): GraphNode {
   return {
     id: docNodeId(doc.id),
@@ -136,6 +150,7 @@ function makeDocNode(doc: KnowledgeDoc, kb: KnowledgeBase): GraphNode {
     branchId: kb.branchOf.get(doc.id) ?? doc.id,
     freshness: doc.freshness,
     excerpt: doc.summary,
+    shape: SHAPE_BY_KIND[doc.kind],
   };
 }
 
@@ -153,7 +168,14 @@ function fullGraph(kb: KnowledgeBase): Graph {
       const id = unresolvedNodeId(title);
       let node = seenStubs.get(id);
       if (!node) {
-        node = { id, kind: "unresolved", label: title, href: null, degree: 0 };
+        node = {
+          id,
+          kind: "unresolved",
+          label: title,
+          href: null,
+          degree: 0,
+          shape: SHAPE_BY_KIND.unresolved,
+        };
         seenStubs.set(id, node);
         nodes.push(node);
       }
@@ -296,30 +318,5 @@ export function localGraph(kb: KnowledgeBase, centerId: string, filters: LocalFi
   return { nodes, edges: kept };
 }
 
-/**
- * Node weight. The global graph sizes by link count; the local graph sizes by
- * distance from the center, so the doc you are reading is unmistakably the
- * biggest thing on screen.
- */
-export function nodeWeight(node: GraphNode, depth?: number): number {
-  if (node.ring === undefined || !depth) return node.degree;
-  return 30 - (30 / depth) * node.ring;
-}
-
-/** Human-readable summary for the graph's accessible name and live region. */
-export function describeNode(node: GraphNode, neighbors: GraphNode[]): string {
-  const names = neighbors.map((n) => n.label);
-  const count = names.length;
-  if (count === 0) return `${node.label}. No links.`;
-  return `${node.label}. ${count} link${count === 1 ? "" : "s"}: ${names.join(", ")}.`;
-}
-
-/** Both directions, deduped — used for hover highlighting and keyboard cycling. */
-export function neighborsOf(id: string, graph: Graph): GraphNode[] {
-  const ids = new Set<string>();
-  for (const e of graph.edges) {
-    if (e.source === id) ids.add(e.target);
-    else if (e.target === id) ids.add(e.source);
-  }
-  return graph.nodes.filter((n) => ids.has(n.id));
-}
+// nodeWeight/describeNode/neighborsOf moved to lib/graph.ts — pure traversal
+// helpers with zero docs-specific logic, now shared with processes-graph.ts.
