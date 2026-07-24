@@ -963,11 +963,6 @@ export const connectors: Connector[] = [
   },
 ];
 
-export const processColor = (slug: string) =>
-  LABEL_DOT_COLORS[
-    Math.max(0, processes.findIndex((p) => p.slug === slug)) % LABEL_DOT_COLORS.length
-  ];
-
 export const getProcess = (slug: string) => processes.find((p) => p.slug === slug);
 export const getSkill = (id: string) => skills.find((s) => s.id === id);
 export const getConnector = (id: string) => connectors.find((c) => c.id === id);

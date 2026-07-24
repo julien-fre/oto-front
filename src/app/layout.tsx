@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { AppShell } from "@/components/shell/app-shell";
 import { AuthProvider } from "@/components/auth-provider";
 import { KnowledgeProvider } from "@/components/knowledge/knowledge-provider";
+import { ProcessesProvider } from "@/components/processes-provider";
 import { SidebarProvider } from "@/components/shell/sidebar-provider";
 import { VersionProvider } from "@/components/shell/version-provider";
 import {
@@ -48,19 +49,21 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full">
         <AuthProvider>
-          {/* Knowledge sits above the shell because the sidebar and top bar
-              render the doc tree and breadcrumbs from it — see the note in
-              knowledge-provider.tsx. */}
+          {/* Knowledge and Processes sit above the shell because the sidebar
+              lists both live from here — see the note in
+              knowledge-provider.tsx / processes-provider.tsx. */}
           <KnowledgeProvider>
-            <SidebarProvider
-              defaultOpen={defaultOpen}
-              defaultExpanded={defaultExpanded}
-              defaultWidth={defaultWidth}
-            >
-              <VersionProvider defaultVersion={defaultVersion}>
-                <AppShell>{children}</AppShell>
-              </VersionProvider>
-            </SidebarProvider>
+            <ProcessesProvider>
+              <SidebarProvider
+                defaultOpen={defaultOpen}
+                defaultExpanded={defaultExpanded}
+                defaultWidth={defaultWidth}
+              >
+                <VersionProvider defaultVersion={defaultVersion}>
+                  <AppShell>{children}</AppShell>
+                </VersionProvider>
+              </SidebarProvider>
+            </ProcessesProvider>
           </KnowledgeProvider>
         </AuthProvider>
       </body>

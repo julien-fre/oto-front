@@ -7,6 +7,7 @@ import { ConnectorLogo } from "@/components/connector-logo";
 import { ProcessContext } from "@/components/process-context";
 import { ProcessTabs } from "@/components/process-tabs";
 import { ProcessVersionMenu } from "@/components/process-version-menu";
+import { useProcesses } from "@/components/processes-provider";
 import { ToolReference } from "@/components/tool-reference";
 import { ApiError } from "@/lib/api";
 import { connectorColor, orderedConnectorsForProcess, toolsForConnector } from "@/lib/mock-data";
@@ -26,6 +27,7 @@ type LoadState =
 export default function ProcessLayout({ children }: { children: React.ReactNode }) {
   const { slug } = useParams<{ slug: string }>();
   const { isAuthenticated, isLoading: authLoading, login } = useAuth();
+  const { refresh: refreshProcessList } = useProcesses();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
 
   const loadProcess = useCallback(() => {
@@ -102,7 +104,12 @@ export default function ProcessLayout({ children }: { children: React.ReactNode 
                 slug={slug}
                 version={process.version}
                 updatedAt={process.updatedAt}
-                onReverted={loadProcess}
+                onReverted={() => {
+                  loadProcess();
+                  // A restored version can change the title shown in the
+                  // sidebar/list, not just this page's own content.
+                  refreshProcessList();
+                }}
               />
 
               {processConnectors.length > 0 && (
