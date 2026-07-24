@@ -12,7 +12,6 @@ import {
   SettingsIcon,
   WorkflowIcon,
 } from "@/components/icons";
-import { OtoMark } from "@/components/oto-mark";
 import { cn, focusRing, treeGuide } from "@/lib/cn";
 import { useKnowledge } from "@/components/knowledge/knowledge-provider";
 import { docAccentColor, type KnowledgeBase, type KnowledgeDoc } from "@/lib/knowledge-api";
@@ -20,6 +19,7 @@ import { useProcesses } from "@/components/processes-provider";
 import { processAccentColor } from "@/lib/processes-api";
 import { NavLink } from "./nav-link";
 import { NavSection } from "./nav-section";
+import { OrgSwitcherMenu } from "./org-switcher-menu";
 import { SidebarRail } from "./sidebar-rail";
 import { useSidebar } from "./sidebar-provider";
 
@@ -99,17 +99,7 @@ function SidebarContent({ variant }: { variant: "desktop" | "drawer" | "peek" })
   return (
     <div className={cn("flex h-full flex-col", variant === "drawer" ? "w-60" : "w-full")}>
       <div className="flex h-12 shrink-0 items-center gap-1 px-3">
-        <button
-          type="button"
-          aria-haspopup="menu"
-          className={cn(
-            "group flex h-8 min-w-0 flex-1 items-center gap-2 rounded-full px-2 transition-colors duration-100 hover:bg-interactive-hovered motion-reduce:transition-none",
-            focusRing,
-          )}
-        >
-          <OtoMark className="shrink-0 text-gray-12 transition-transform duration-300 ease-out group-hover:rotate-90 motion-reduce:transition-none" />
-          <span className="truncate text-body-medium text-gray-12">Otomata</span>
-        </button>
+        <OrgSwitcherMenu />
         <button
           type="button"
           onClick={() => toggleNav("button")}

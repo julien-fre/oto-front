@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { AppShell } from "@/components/shell/app-shell";
 import { AuthProvider } from "@/components/auth-provider";
 import { KnowledgeProvider } from "@/components/knowledge/knowledge-provider";
+import { OrgProvider } from "@/components/org-provider";
 import { ProcessesProvider } from "@/components/processes-provider";
 import { SidebarProvider } from "@/components/shell/sidebar-provider";
 import { VersionProvider } from "@/components/shell/version-provider";
@@ -51,18 +52,23 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <AuthProvider>
           {/* Knowledge and Processes sit above the shell because the sidebar
               lists both live from here — see the note in
-              knowledge-provider.tsx / processes-provider.tsx. */}
+              knowledge-provider.tsx / processes-provider.tsx. OrgProvider
+              nests inside both: switching org calls their refresh(), which
+              means calling their hooks, which requires being their
+              descendant. */}
           <KnowledgeProvider>
             <ProcessesProvider>
-              <SidebarProvider
-                defaultOpen={defaultOpen}
-                defaultExpanded={defaultExpanded}
-                defaultWidth={defaultWidth}
-              >
-                <VersionProvider defaultVersion={defaultVersion}>
-                  <AppShell>{children}</AppShell>
-                </VersionProvider>
-              </SidebarProvider>
+              <OrgProvider>
+                <SidebarProvider
+                  defaultOpen={defaultOpen}
+                  defaultExpanded={defaultExpanded}
+                  defaultWidth={defaultWidth}
+                >
+                  <VersionProvider defaultVersion={defaultVersion}>
+                    <AppShell>{children}</AppShell>
+                  </VersionProvider>
+                </SidebarProvider>
+              </OrgProvider>
             </ProcessesProvider>
           </KnowledgeProvider>
         </AuthProvider>
