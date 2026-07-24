@@ -9,6 +9,8 @@ import {
   docNodeId,
   localGraph,
   MAX_LOCAL_DEPTH,
+  nodeColor,
+  type GraphNode,
 } from "@/lib/knowledge-graph";
 import { DEFAULT_DISPLAY, GraphCanvas } from "./graph-canvas";
 
@@ -35,7 +37,7 @@ export function LocalGraph({ kb, docId }: { kb: KnowledgeBase; docId: number }) 
       <div className="min-h-[22rem] flex-1 overflow-hidden rounded-lg border border-border bg-gray-1">
         <GraphCanvas
           graph={graph}
-          colorBy="branch"
+          nodeColor={(node) => nodeColor(node as GraphNode, "branch")}
           display={RAIL_DISPLAY}
           forces={RAIL_FORCES}
           centerId={centerId}

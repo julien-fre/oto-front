@@ -1,13 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
-import { useProcesses } from "@/components/processes-provider";
-import { cn, focusRing } from "@/lib/cn";
+import { ProcessesGraph } from "@/components/processes/processes-graph";
 
+// A graph, not a list — processes linked to the connectors they use, the
+// same shape /knowledge?view=graph shows for docs. Loading/error/empty states
+// for the process data itself are owned by ProcessesGraph (via
+// useProcessesGraph); this page only gates on auth, same as before.
 export default function ProcessesPage() {
   const { isAuthenticated, isLoading: authLoading, login } = useAuth();
-  const { state, refresh } = useProcesses();
 
   if (authLoading) {
     return <Centered>Loading…</Centered>;
@@ -27,50 +28,9 @@ export default function ProcessesPage() {
     );
   }
 
-  if (state.kind === "idle" || state.kind === "loading") {
-    return <Centered>Loading processes…</Centered>;
-  }
-
-  if (state.kind === "error") {
-    return (
-      <Centered>
-        <p>Couldn&apos;t load processes — {state.message}</p>
-        <button
-          type="button"
-          onClick={refresh}
-          className={cn(
-            "h-7 rounded-full border border-border px-3 text-button text-gray-12 hover:bg-gray-2",
-            focusRing,
-          )}
-        >
-          Try again
-        </button>
-      </Centered>
-    );
-  }
-
-  if (state.processes.length === 0) {
-    return <Centered>No named procedures yet for this org.</Centered>;
-  }
-
   return (
-    <div className="px-12 py-6">
-      <div className="divide-y divide-gray-5 border-y border-gray-5">
-        {state.processes.map((process) => (
-          <Link
-            key={process.slug}
-            href={`/processes/${process.slug}`}
-            className="flex items-baseline gap-4 px-2 py-2 transition-colors duration-100 hover:bg-gray-2 motion-reduce:transition-none"
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-body text-gray-12">{process.name}</span>
-              <span className="block truncate text-caption text-muted">
-                {process.description}
-              </span>
-            </span>
-          </Link>
-        ))}
-      </div>
+    <div className="h-full px-12 py-6">
+      <ProcessesGraph />
     </div>
   );
 }

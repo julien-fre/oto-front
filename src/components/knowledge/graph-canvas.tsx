@@ -12,17 +12,8 @@ import {
   type SimNode,
   type Simulation,
 } from "@/lib/force-graph";
+import { describeNode, neighborsOf, nodeWeight, type Graph, type GraphNode } from "@/lib/graph";
 import { readGraphTheme, type GraphTheme } from "@/lib/graph-theme";
-import {
-  describeNode,
-  EDGE_LABELS,
-  neighborsOf,
-  nodeColor,
-  nodeWeight,
-  type ColorBy,
-  type Graph,
-  type GraphNode,
-} from "@/lib/knowledge-graph";
 
 export type DisplaySettings = {
   arrows: boolean;
@@ -126,7 +117,12 @@ function seedNew(
 
 export type GraphCanvasProps = {
   graph: Graph;
-  colorBy: ColorBy;
+  /** Resolves a node's fill color — the domain caller curries its own "color
+   *  by" dimension in, so the canvas never needs to know that vocabulary. */
+  nodeColor: (node: GraphNode) => string;
+  /** Shown next to an edge when hovered, keyed by GraphEdge.kind. Omit (or
+   *  leave a kind out) to show nothing for that edge. */
+  edgeLabels?: Record<string, string>;
   display: DisplaySettings;
   forces: ForceParams;
   /** Local graph only: the node to mark as focused and size the rings from. */
@@ -147,7 +143,8 @@ export type GraphCanvasProps = {
 
 export function GraphCanvas({
   graph,
-  colorBy,
+  nodeColor,
+  edgeLabels,
   display,
   forces,
   centerId,
@@ -179,7 +176,8 @@ export function GraphCanvas({
   const labelWidthRef = useRef(new Map<string, number>());
   const reducedRef = useRef(false);
   const displayRef = useRef(display);
-  const colorByRef = useRef(colorBy);
+  const nodeColorRef = useRef(nodeColor);
+  const edgeLabelsRef = useRef(edgeLabels);
   const focusedRef = useRef<string | null>(null);
   const sizeRef = useRef({ w: 0, h: 0 });
   // Set once the user zooms or pans by hand. While it is false the camera
@@ -338,7 +336,8 @@ export function GraphCanvas({
       // thing that makes a small graph legible at a glance — you can read
       // "reads" / "uses" rather than guessing what a line means.
       if (d.edgeLabels && !compact && touched && alpha > 0.5) {
-        const label = EDGE_LABELS[e.kind];
+        const label = edgeLabelsRef.current?.[e.kind];
+        if (!label) continue;
         const fontSize = 11 / t.k;
         ctx.font = `${fontSize}px ${theme.fontFamily}`;
         ctx.textAlign = "center";
@@ -366,17 +365,17 @@ export function GraphCanvas({
       const isFocused = node.id === focused;
 
       ctx.globalAlpha = node.kind === "unresolved" ? alpha * 0.5 : alpha;
-      ctx.fillStyle = isHovered ? theme.ink : nodeColor(node, colorByRef.current);
+      ctx.fillStyle = isHovered ? theme.ink : nodeColorRef.current(node);
 
       // Shape carries the node's kind, so type is never encoded by colour
-      // alone: a filled circle is a doc (human page), a rounded square a note
-      // (agent-written), a ring a source (imported material).
+      // alone — each domain decides what circle/square/ring means (docs: a
+      // filled circle is a doc, a square a note, a ring a source).
       ctx.beginPath();
-      if (node.kind === "note") {
+      if (node.shape === "square") {
         const s = r * 0.9;
         ctx.roundRect(p.x - s, p.y - s, s * 2, s * 2, s * 0.4);
         ctx.fill();
-      } else if (node.kind === "source") {
+      } else if (node.shape === "ring") {
         ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
         ctx.lineWidth = Math.max(1.5 / t.k, r * 0.28);
         ctx.strokeStyle = ctx.fillStyle;
@@ -725,10 +724,11 @@ export function GraphCanvas({
   // a settings change repaints without tearing down the simulation.
   useEffect(() => {
     displayRef.current = display;
-    colorByRef.current = colorBy;
+    nodeColorRef.current = nodeColor;
+    edgeLabelsRef.current = edgeLabels;
     draw();
     kick();
-  }, [display, colorBy, draw, kick]);
+  }, [display, nodeColor, edgeLabels, draw, kick]);
 
   // Persist positions on unmount too, so a navigation keeps the layout.
   useEffect(() => {
