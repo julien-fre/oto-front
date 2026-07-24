@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SearchIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
 import type { MeInfo } from "@/lib/connectors-api";
@@ -39,7 +39,24 @@ export function ConnectorsBrowser({
   const [status, setStatus] = useState<ConnectorStatusKey | null>("active");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const selected = selectedId ? (connectors.find((c) => c.id === selectedId) ?? null) : null;
+
+  // ⌘F/Ctrl+F focuses the in-page search instead of the browser's native
+  // find — only while the board is actually interactive (the detail panel
+  // makes it `inert`, so native find is the more useful fallback then).
+  useEffect(() => {
+    if (selected != null) return;
+    function onKeydown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    }
+    window.addEventListener("keydown", onKeydown);
+    return () => window.removeEventListener("keydown", onKeydown);
+  }, [selected]);
 
   function openConnector(connector: Connector) {
     restoreFocusRef.current =
@@ -84,14 +101,10 @@ export function ConnectorsBrowser({
     <>
       <div className="mt-6 flex h-full min-h-0 flex-col gap-6" inert={selected != null}>
         <div className="flex shrink-0 flex-wrap items-center gap-3">
-          <div
-            className={cn(
-              "flex h-8 w-64 items-center gap-2 rounded-md border border-border px-2",
-              "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus-ring",
-            )}
-          >
+          <div className="flex h-8 w-64 items-center gap-2 rounded-md border border-border px-2">
             <SearchIcon className="shrink-0 text-icon" />
             <input
+              ref={searchRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
