@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { GraphCanvas } from "@/components/knowledge/graph-canvas";
 import { MaximizeIcon, SettingsIcon } from "@/components/icons";
 import { cn, focusRing } from "@/lib/cn";
 import {
@@ -10,8 +11,7 @@ import {
   serializeSettings,
   writeGraphCookie,
   type GraphSettings,
-} from "@/lib/graph-settings";
-import type { KnowledgeBase } from "@/lib/knowledge-api";
+} from "@/lib/processes-graph-settings";
 import {
   buildGraph,
   colorLegend,
@@ -19,10 +19,13 @@ import {
   nodeColor,
   type GraphNode,
   type NodeKind,
-} from "@/lib/knowledge-graph";
-import { GraphCanvas } from "./graph-canvas";
-import { GraphSettingsPanel } from "./graph-settings-panel";
-import { NodePreview } from "./node-preview";
+} from "@/lib/processes-graph";
+import type { RealProcess } from "@/lib/processes-api";
+import { ProcessNodePreview } from "./process-node-preview";
+import { ProcessesGraphSettingsPanel } from "./processes-graph-settings-panel";
+import { useProcessesGraph } from "./use-processes-graph";
+
+const EMPTY_PROCESSES: RealProcess[] = [];
 
 function readSettingsCookie(): GraphSettings {
   const raw = document.cookie
@@ -32,20 +35,25 @@ function readSettingsCookie(): GraphSettings {
   return parseSettings(raw);
 }
 
-export function KnowledgeGraph({ kb }: { kb: KnowledgeBase }) {
-  // Cookie read client-side: this component only ever renders after auth and
-  // the KB fetch resolve, which is strictly client territory — there is no
-  // server pass to keep in sync, so no hydration hazard.
+// Mirrors knowledge/knowledge-graph.tsx's shape file-for-file — same toolbar,
+// hover preview, counts+legend overlay, empty states. The one structural
+// difference is the fetch: this owns useProcessesGraph() (the per-process
+// body fetch needed for tools/connector edges) instead of receiving an
+// already-fetched KnowledgeBase as a prop.
+export function ProcessesGraph() {
+  const graphState = useProcessesGraph();
   const [settings, setSettings] = useState<GraphSettings>(readSettingsCookie);
   const [panelOpen, setPanelOpen] = useState(false);
   const [hovered, setHovered] = useState<{ node: GraphNode; x: number; y: number } | null>(null);
   const [resetKey, setResetKey] = useState(0);
 
-  const graph = useMemo(() => buildGraph(kb, settings.filters), [kb, settings.filters]);
-  const legend = useMemo(() => colorLegend(settings.colorBy, kb), [settings.colorBy, kb]);
+  const processes: RealProcess[] = graphState.kind === "ready" ? graphState.processes : EMPTY_PROCESSES;
+  const graph = useMemo(
+    () => buildGraph(processes, settings.filters),
+    [processes, settings.filters],
+  );
+  const legend = useMemo(() => colorLegend(settings.colorBy), [settings.colorBy]);
 
-  // Persist debounced, the way Obsidian does — a slider drag would otherwise
-  // write a cookie on every animation frame.
   const writeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (writeTimer.current) clearTimeout(writeTimer.current);
@@ -57,21 +65,32 @@ export function KnowledgeGraph({ kb }: { kb: KnowledgeBase }) {
     };
   }, [settings]);
 
-  const docCount = graph.nodes.filter((n) => n.kind !== "unresolved").length;
+  const processCount = graph.nodes.filter((n) => n.kind === "process").length;
 
-  // What each node *shape* means — the counterpart to the colour legend. Only
-  // the kinds actually on screen appear; the swatch mirrors the node shape
-  // (circle / square / ring) in neutral grey, so shape reads as its own signal
-  // independent of whatever "Color by" is set to.
   const shapes = useMemo(() => {
     const present = new Set(graph.nodes.map((n) => n.kind));
     const order: { kind: NodeKind; label: string }[] = [
-      { kind: "doc", label: "Doc" },
-      { kind: "note", label: "Note" },
-      { kind: "source", label: "Source" },
+      { kind: "process", label: "Process" },
+      { kind: "connector", label: "Connector" },
     ];
     return order.filter((s) => present.has(s.kind));
   }, [graph]);
+
+  if (graphState.kind === "loading" || graphState.kind === "idle") {
+    return (
+      <div className="flex h-full w-full items-center justify-center rounded-lg border border-border bg-gray-1 text-body text-muted">
+        Loading processes…
+      </div>
+    );
+  }
+
+  if (graphState.kind === "error") {
+    return (
+      <div className="flex h-full w-full items-center justify-center rounded-lg border border-border bg-gray-1 text-body text-muted">
+        Couldn&apos;t load processes — {graphState.message}
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-full w-full rounded-lg border border-border bg-gray-1">
@@ -82,17 +101,14 @@ export function KnowledgeGraph({ kb }: { kb: KnowledgeBase }) {
         edgeLabels={EDGE_LABELS}
         display={settings.display}
         forces={settings.forces}
-        ariaLabel={`Knowledge graph, ${graph.nodes.length} nodes, ${graph.edges.length} links. Use arrow keys to move between nodes, Page Down to follow a link, Enter to open.`}
+        layoutScope="processes-global"
+        ariaLabel={`Processes graph, ${graph.nodes.length} nodes, ${graph.edges.length} links. Use arrow keys to move between nodes, Page Down to follow a link, Enter to open.`}
         onHoverChange={(node, screen) =>
-          // Cast: this callback only ever fires for nodes we built ourselves
-          // (docs), just structurally widened by GraphCanvas's generic prop type.
-          setHovered(
-            node && screen ? { node: node as GraphNode, x: screen.x, y: screen.y } : null,
-          )
+          setHovered(node && screen ? { node: node as GraphNode, x: screen.x, y: screen.y } : null)
         }
       />
 
-      {hovered && <NodePreview node={hovered.node} x={hovered.x} y={hovered.y} />}
+      {hovered && <ProcessNodePreview node={hovered.node} x={hovered.x} y={hovered.y} />}
 
       <div className="pointer-events-none absolute right-2 top-2 flex flex-col items-end gap-2">
         <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-border bg-background p-0.5 shadow-dropdown">
@@ -113,7 +129,7 @@ export function KnowledgeGraph({ kb }: { kb: KnowledgeBase }) {
             onClick={() => setPanelOpen((open) => !open)}
             aria-label="Open graph settings"
             aria-expanded={panelOpen}
-            aria-controls="graph-settings-panel"
+            aria-controls="processes-graph-settings-panel"
             className={cn(
               "flex size-7 shrink-0 items-center justify-center rounded-full transition-[background-color,scale] duration-100 active:scale-95 motion-reduce:transition-none",
               panelOpen
@@ -127,10 +143,10 @@ export function KnowledgeGraph({ kb }: { kb: KnowledgeBase }) {
         </div>
         {panelOpen && (
           <div
-            id="graph-settings-panel"
+            id="processes-graph-settings-panel"
             className="pointer-events-auto animate-panel-in motion-reduce:animate-none"
           >
-            <GraphSettingsPanel
+            <ProcessesGraphSettingsPanel
               settings={settings}
               onChange={setSettings}
               onReset={() => {
@@ -143,11 +159,10 @@ export function KnowledgeGraph({ kb }: { kb: KnowledgeBase }) {
         )}
       </div>
 
-      {/* Counts and legend. The legend is not decoration: it is what stops the
-          graph encoding meaning in colour alone. */}
       <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-background/80 px-2 py-1">
         <span className="text-caption text-muted">
-          {docCount} page{docCount === 1 ? "" : "s"} · {graph.edges.length} link{graph.edges.length === 1 ? "" : "s"}
+          {processCount} process{processCount === 1 ? "" : "es"} · {graph.edges.length} link
+          {graph.edges.length === 1 ? "" : "s"}
         </span>
         {shapes.map((shape) => (
           <span key={shape.kind} className="flex items-center gap-1.5">
@@ -155,9 +170,8 @@ export function KnowledgeGraph({ kb }: { kb: KnowledgeBase }) {
               aria-hidden="true"
               className={cn(
                 "size-2 shrink-0",
-                shape.kind === "note" && "rounded-[2px] bg-gray-9",
-                shape.kind === "doc" && "rounded-full bg-gray-9",
-                shape.kind === "source" && "rounded-full border-[1.5px] border-gray-9",
+                shape.kind === "process" && "rounded-full bg-gray-9",
+                shape.kind === "connector" && "rounded-full border-[1.5px] border-gray-9",
               )}
             />
             <span className="text-caption text-muted">{shape.label}</span>
@@ -180,8 +194,8 @@ export function KnowledgeGraph({ kb }: { kb: KnowledgeBase }) {
 
       {graph.nodes.length === 0 && (
         <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-body text-muted">
-          {kb.docs.length === 0
-            ? "No pages yet. Ask Oto to capture what it learns — pages land here, in the org’s knowledge base."
+          {processes.length === 0
+            ? "No named procedures yet for this org."
             : "Nothing matches these filters."}
         </p>
       )}
